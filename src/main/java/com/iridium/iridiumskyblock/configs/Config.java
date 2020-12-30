@@ -14,8 +14,8 @@ import java.util.stream.Collectors;
 import org.bukkit.entity.EntityType;
 
 public class Config {
-    public String prefix = "&b&lIridiumSkyblock &8»";
-    public String worldName = "IridiumSkyblock";
+    public String prefix = "&b&lOceanIslands &8»";
+    public String worldName = "OceanIslands";
     public String netherWorldName = worldName + "_nether";
     public String chatRankPlaceholder = "[ISLAND_RANK]";
     public String chatValuePlaceholder = "[ISLAND_VALUE]";
@@ -57,6 +57,7 @@ public class Config {
     public boolean enableBlockStacking = true;
     public boolean stripTopIslandPlaceholderColors = true;
     public boolean denyNaturalSpawnWhitelist = false;
+    public boolean netherLavaOcean = true;
     public int deleteBackupsAfterDays = 7;
     public int regenCooldown = 3600;
     public int distance = 151;
@@ -67,11 +68,14 @@ public class Config {
     public int intervalBetweenMobTarget = 15;
     public int islandMoneyPerValue = 1000;
     public int numberAbbreviationDecimalPlaces = 2;
+    public int minOceanFloorLevel = 10;
+    public int maxOceanFloorLevel = 25;
+    public int waterHeight = 80;
     public double valuePerLevel = 100.00;
     public double dailyMoneyInterest = 0.5;
     public double dailyCrystalsInterest = 5;
     public double dailyExpInterest = 0.01;
-    public XBiome defaultBiome = XBiome.PLAINS;
+    public XBiome defaultBiome = XBiome.BEACH;
     public XBiome defaultNetherBiome = XBiome.NETHER_WASTES;
     public MissionRestart missionRestart = MissionRestart.Daily;
     public String worldSpawn = "world";

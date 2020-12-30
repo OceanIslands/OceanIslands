@@ -1,19 +1,27 @@
-![SkyBlockHeader](https://i.imgur.com/yJlpKak.png)
+# OceanIslands
+Fork of the plugin [IridiumSkyblock](https://github.com/IridiumLLC/IridiumSkyblock/) which generates ocean islands instead of weird islands flying in the sky.
+Please be aware: The plugin should work in all versions that IridiumSkyblock supports, but the default island schematics were made in the 1.16.
 
-### Maven ![Nexus](https://img.shields.io/nexus/r/com.iridium/IridiumSkyblock?server=https%3A%2F%2Fnexus.savagelabs.net&style=for-the-badge)
+![Overworld picture](https://i.imgur.com/pf9g0xy.png)
+![Nether picture](https://i.imgur.com/CoU11fE.png)
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5442cbaf47534dad86576802f0d829e9)](https://app.codacy.com/gh/IridiumLLC/IridiumSkyblock?utm_source=github.com&utm_medium=referral&utm_content=IridiumLLC/IridiumSkyblock&utm_campaign=Badge_Grade)
+## New config options (config.json)
+### minOceanFloorLevel
+The minimal y-level of the ocean floor.
+Default: 15
+### maxOceanFloorLevel
+The maximal y-level of the ocean floor.
+Default: 25
+### waterHeight
+The height of the water. You have to adjust the schematic position manually when changing this!
+Default value: 80
+### netherLavaOcean
+Whether the nether island should be surrounded by lava or not. Setting it to false will generate water like in the overworld.
+Default: true
 
-```xml
-<repository>
-    <id>savagelabs</id>
-    <url>https://nexus.savagelabs.net/repository/maven-releases/</url>
-</repository>
-```
-```xml
-<dependency>
-    <groupId>com.iridium</groupId>
-    <artifactId>IridiumSkyblock</artifactId>
-    <version>LATEST</version>
-</dependency>
-```
+## Todo
+- Improve the world generator
+- Add better schematics (I'm just a terrible builder)
+
+## Support
+Please contact das_#9677 on Discord.

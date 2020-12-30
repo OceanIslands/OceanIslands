@@ -1,13 +1,13 @@
-name: IridiumSkyblock
+name: OceanIslands
 version: 2.6.5
-description: Skyblock Redefined
+description: Oceans Redefined
 main: com.iridium.iridiumskyblock.IridiumSkyblock
 api-version: '1.13'
-author: IridiumDevelopment
+author: IridiumDevelopment, das_
 load: STARTUP
 depend: [ Vault ]
 softdepend: [ RoseStacker, WorldEdit, PlaceholderAPI, MVdWPlaceholderAPI, WildStacker, EpicSpawners, UltimateStacker, MergedSpawner, Multiverse-Core, Essentials, EssentialsChat, ChatManager, DeluxeChat ]
 commands:
   island:
-    aliases: [ "is", "IridiumSkyblock" ]
+    aliases: [ "is", "IridiumSkyblock", "OceanIslands" ]
     description: Main plugin command
