@@ -6,7 +6,7 @@ Please be aware: The plugin should work in all versions that IridiumSkyblock sup
 ![Nether picture](https://i.imgur.com/CoU11fE.png)
 
 ## Download
-
+Check the [Releases page](https://github.com/OceanIslands/OceanIslands/releases)
 
 ## New config options (config.json)
 ### minOceanFloorLevel
