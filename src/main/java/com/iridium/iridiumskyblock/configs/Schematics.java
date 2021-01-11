@@ -8,7 +8,7 @@ import java.util.List;
 
 public class Schematics {
     public List<FakeSchematic> schematicList = Collections.singletonList(
-            new FakeSchematic(-0.5, 96.00, -2.5, new SchematicData("island.schematic", XBiome.PLAINS, 0.0, 0.0, 0.0), new SchematicData("nether.schematic", XBiome.NETHER_WASTES, 0.0, 0.0, 0.0), "", XMaterial.GRASS_BLOCK, "&b&lDefault Island", Collections.singletonList("&7The default island"), 0)
+            new FakeSchematic(-0.5, 80, -2.5, new SchematicData("island.schem", XBiome.BEACH, 0.0, -11, 0.0), new SchematicData("nether.schem", XBiome.NETHER_WASTES, 0.0, -20, 0.0), "", XMaterial.GRASS_BLOCK, "&b&lDefault Island", Collections.singletonList("&7The default island"), 0)
     );
 
     public static class FakeSchematic {
