@@ -28,16 +28,24 @@ public class HelpCommand extends Command {
             }
             page = Integer.parseInt(args[1]);
         }
+
         int maxpage = (int) Math.ceil(IridiumSkyblock.getCommandManager().commands.size() / 18.00);
         int current = 0;
+
         p.sendMessage(Utils.color(IridiumSkyblock.getMessages().helpHeader));
         for (com.iridium.iridiumskyblock.commands.Command command : IridiumSkyblock.getCommandManager().commands) {
+
             if ((p.hasPermission(command.permission) || command.permission.equalsIgnoreCase("") || command.permission.equalsIgnoreCase("iridiumskyblock.")) && command.enabled) {
-                if (current >= (page - 1) * 18 && current < page * 18)
-                    p.sendMessage(Utils.color(IridiumSkyblock.getMessages().helpMessage.replace("%command%", command.aliases.get(0)).replace("%description%", command.description)));
+                if (current >= (page - 1) * 18 && current < page * 18) {
+                    TextComponent cmdComponent = new TextComponent(Utils.color(IridiumSkyblock.getMessages().helpMessage.replace("%command%", command.aliases.get(0)).replace("%description%", command.description)));
+                    cmdComponent.setClickEvent(new ClickEvent(ClickEvent.Action.SUGGEST_COMMAND, "/is " + command.aliases.get(0)));
+                    p.getPlayer().spigot().sendMessage(cmdComponent);
+                }
+
                 current++;
             }
         }
+
         BaseComponent[] components = TextComponent.fromLegacyText(Utils.color(IridiumSkyblock.getMessages().helpfooter.replace("%maxpage%", maxpage + "").replace("%page%", page + "")));
 
         for (BaseComponent component : components) {
@@ -46,6 +54,8 @@ public class HelpCommand extends Command {
                     component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/is help " + (page + 1)));
                     component.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder(IridiumSkyblock.getMessages().helpPageHoverMessage.replace("%page%", "" + (page + 1))).create()));
                 }
+
+
             } else if (ChatColor.stripColor(component.toLegacyText()).contains(IridiumSkyblock.getMessages().previousPage)) {
                 if (page > 1) {
                     component.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/is help " + (page - 1)));

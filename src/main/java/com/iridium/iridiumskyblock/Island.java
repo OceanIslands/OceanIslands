@@ -4,16 +4,10 @@ import com.cryptomorin.xseries.XBiome;
 import com.cryptomorin.xseries.XMaterial;
 import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.spawn.EssentialsSpawn;
-import com.iridium.iridiumskyblock.api.IslandCreateEvent;
-import com.iridium.iridiumskyblock.api.IslandDeleteEvent;
-import com.iridium.iridiumskyblock.api.IslandWorthCalculatedEvent;
-import com.iridium.iridiumskyblock.api.MissionCompleteEvent;
-import com.iridium.iridiumskyblock.configs.BlockValues;
-import com.iridium.iridiumskyblock.configs.Config;
-import com.iridium.iridiumskyblock.configs.Messages;
+import com.iridium.iridiumskyblock.api.*;
+import com.iridium.iridiumskyblock.configs.*;
 import com.iridium.iridiumskyblock.configs.Missions.Mission;
 import com.iridium.iridiumskyblock.configs.Missions.MissionData;
-import com.iridium.iridiumskyblock.configs.Schematics;
 import com.iridium.iridiumskyblock.gui.*;
 import com.iridium.iridiumskyblock.managers.IslandDataManager;
 import com.iridium.iridiumskyblock.managers.IslandManager;
@@ -35,33 +29,11 @@ import java.sql.Connection;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class Island {
 
-    public static class Warp {
-        Location location;
-        String name;
-        String password;
-
-        public Warp(Location location, String name, String password) {
-            this.location = location;
-            this.name = name;
-            this.password = password;
-        }
-
-        public Location getLocation() {
-            return location;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getPassword() {
-            return password;
-        }
-    }
-
+    public int id;
     public String owner;
     public Set<String> members;
     public Location pos1;
@@ -81,25 +53,15 @@ public class Island {
     public transient IslandAdminGUI islandAdminGUI;
     public transient CoopGUI coopGUI;
     public transient BankGUI bankGUI;
-    public transient BiomeGUI biomeGUI;
-    public transient BiomeGUI netherBiomeGUI;
+    public transient MultiplePagesGUI<BiomeGUI> biomeGUI;
+    public transient MultiplePagesGUI<BiomeGUI> netherBiomeGUI;
     public transient VisitorGUI visitorGUI;
-
-    public int id;
-
-    public int spawnerBooster;
-    public int farmingBooster;
-    public int expBooster;
-    public int flightBooster;
 
     private transient int boosterId;
 
-    public int crystals;
-
-    public int sizeLevel;
-    public int memberLevel;
-    public int warpLevel;
-    public int oreLevel;
+    private HashMap<String, Integer> boosterTimes = new HashMap<>();
+    private HashMap<String, Integer> upgradeLevels = new HashMap<>();
+    private HashMap<String, Double> bankItems = new HashMap<>();
 
     public transient int generateID;
 
@@ -113,7 +75,7 @@ public class Island {
     public transient ConcurrentHashMap<String, Integer> spawners;
     public ConcurrentHashMap<Location, Integer> stackedBlocks;
 
-    public final List<Warp> warps;
+    public List<IslandWarp> islandWarps;
 
     private double startvalue;
 
@@ -139,9 +101,6 @@ public class Island {
     public transient Set<Integer> coopInvites;
 
     public String name;
-
-    public double money;
-    public int exp;
 
     public XBiome biome;
 
@@ -186,18 +145,9 @@ public class Island {
         this.home = home;
         this.members = new HashSet<>(Collections.singletonList(user.player));
         this.id = id;
-        spawnerBooster = 0;
-        farmingBooster = 0;
-        expBooster = 0;
-        flightBooster = 0;
-        crystals = 0;
-        sizeLevel = 1;
-        memberLevel = 1;
-        warpLevel = 1;
-        oreLevel = 1;
         value = 0;
         lastMissionValue = 0;
-        warps = new ArrayList<>();
+        islandWarps = new ArrayList<>();
         startvalue = -1;
         borderColor = IridiumSkyblock.getBorder().startingColor;
         visit = IridiumSkyblock.getConfiguration().defaultIslandPublic;
@@ -357,7 +307,7 @@ public class Island {
     }
 
     public void sendBorder(Player p) {
-        double size = IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size;
+        double size = IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size;
         if (size % 2 == 0) size++;
         String worldName = p.getLocation().getWorld().getName();
         if (worldName.equals(IslandManager.getWorld().getName())) {
@@ -400,8 +350,8 @@ public class Island {
         final MissionData level = levels.get(levelProgress);
         final int crystalReward = level.crystalReward;
         final int vaultReward = level.vaultReward;
-        this.crystals += crystalReward;
-        this.money += vaultReward;
+        setCrystals(getCrystals() + crystalReward);
+        setMoney(getMoney() + vaultReward);
         Bukkit.getPluginManager().callEvent(new MissionCompleteEvent(this, missionName, level.type, levelProgress));
         final Messages messages = IridiumSkyblock.getMessages();
         final String titleMessage = messages.missionComplete
@@ -529,17 +479,17 @@ public class Island {
         }
         this.value += this.extravalue;
         if (IridiumSkyblock.getConfiguration().islandMoneyPerValue != 0)
-            this.value += this.money / IridiumSkyblock.getConfiguration().islandMoneyPerValue;
+            this.value += this.getMoney() / IridiumSkyblock.getConfiguration().islandMoneyPerValue;
 
         IslandWorthCalculatedEvent islandWorthCalculatedEvent = new IslandWorthCalculatedEvent(this, this.value);
         Bukkit.getPluginManager().callEvent(islandWorthCalculatedEvent);
-        this.value = islandWorthCalculatedEvent.islandWorth;
-        IslandDataManager.save(this, true);
+        this.value = islandWorthCalculatedEvent.getIslandWorth();
+        updateIslandData();
     }
 
     public void addWarp(Player player, Location location, String name, String password) {
-        if (warps.size() < IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.get(warpLevel).size) {
-            warps.add(new Warp(location, name, password));
+        if (islandWarps.size() < IridiumSkyblock.getUpgrades().islandWarpUpgrade.getIslandUpgrade(getWarpLevel()).size) {
+            islandWarps.add(new IslandWarp(location, name, password));
             player.sendMessage(Utils.color(IridiumSkyblock.getMessages().warpAdded.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
         } else {
             player.sendMessage(Utils.color(IridiumSkyblock.getMessages().maxWarpsReached.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
@@ -547,7 +497,7 @@ public class Island {
     }
 
     public void addUser(User user) {
-        if (members.size() < IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.get(memberLevel).size) {
+        if (members.size() < IridiumSkyblock.getUpgrades().islandMemberUpgrade.getIslandUpgrade(getMemberLevel()).size) {
 
             for (String player : members) {
                 User u = User.getUser(player);
@@ -573,6 +523,9 @@ public class Island {
     }
 
     public void removeUser(User user) {
+        IslandLeaveEvent islandLeaveEvent = new IslandLeaveEvent(this, user);
+        Bukkit.getPluginManager().callEvent(islandLeaveEvent);
+        if (islandLeaveEvent.isCancelled()) return;
         user.islandID = 0;
         Player player = Bukkit.getPlayer(user.name);
         if (player != null) {
@@ -606,6 +559,9 @@ public class Island {
     }
 
     public void init() {
+        if (islandWarps == null) islandWarps = new ArrayList<>();
+        this.playersOnIsland = new HashSet<>();
+        this.lastPlayerCaching = 0L;
         if (netherschematic == null) {
             for (Schematics.FakeSchematic fakeSchematic : IridiumSkyblock.getSchematics().schematicList) {
                 if (fakeSchematic.overworldData.schematic.equals(schematic)) {
@@ -621,8 +577,6 @@ public class Island {
             members = new HashSet<>();
             members.add(owner);
         }
-        this.playersOnIsland = new HashSet<>();
-        this.lastPlayerCaching = 0L;
         upgradeGUI = new UpgradeGUI(this);
         boosterGUI = new BoosterGUI(this);
         missionsGUI = new MissionsGUI(this);
@@ -635,29 +589,49 @@ public class Island {
         islandAdminGUI = new IslandAdminGUI(this);
         coopGUI = new CoopGUI(this);
         bankGUI = new BankGUI(this);
-        biomeGUI = new BiomeGUI(this, World.Environment.NORMAL);
-        netherBiomeGUI = new BiomeGUI(this, World.Environment.NETHER);
+        biomeGUI = new MultiplePagesGUI<>(() -> {
+            List<XBiome> biomes = IridiumSkyblock.getConfiguration().islandBiomes.keySet().stream().filter(xBiome -> xBiome.getEnvironment() == World.Environment.NORMAL).collect(Collectors.toList());
+            int size = (int) (Math.floor(biomes.size() / ((double) IridiumSkyblock.getInventories().biomeGUISize - 9)) + 1);
+            for (int i = 1; i <= size; i++) {
+                biomeGUI.addPage(i, new BiomeGUI(this, i, World.Environment.NORMAL));
+            }
+        }, false);
+        netherBiomeGUI = new MultiplePagesGUI<>(() -> {
+            List<XBiome> biomes = IridiumSkyblock.getConfiguration().islandBiomes.keySet().stream().filter(xBiome -> xBiome.getEnvironment() == World.Environment.NETHER).collect(Collectors.toList());
+            int size = (int) (Math.floor(biomes.size() / ((double) IridiumSkyblock.getInventories().biomeGUISize - 9)) + 1);
+            for (int i = 1; i <= size; i++) {
+                netherBiomeGUI.addPage(i, new BiomeGUI(this, i, World.Environment.NETHER));
+            }
+        }, false);
         visitorGUI = new VisitorGUI(this);
+
+        if (upgradeLevels == null) upgradeLevels = new HashMap<>();
+        if (boosterTimes == null) boosterTimes = new HashMap<>();
+        if (bankItems == null) bankItems = new HashMap<>();
 
         failedGenerators = new HashSet<>();
         coopInvites = new HashSet<>();
         boosterId = Bukkit.getScheduler().scheduleAsyncRepeatingTask(IridiumSkyblock.getInstance(), () -> {
-            if (spawnerBooster > 0) spawnerBooster--;
-            if (farmingBooster > 0) farmingBooster--;
-            if (expBooster > 0) expBooster--;
-            if (flightBooster == 1) {
-                for (String player : members) {
-                    Player p = Bukkit.getPlayer(player);
-                    if (p != null) {
-                        if ((!p.hasPermission("IridiumSkyblock.Fly") && !p.hasPermission("iridiumskyblock.fly")) && p.getGameMode().equals(GameMode.SURVIVAL)) {
-                            p.setAllowFlight(false);
-                            p.setFlying(false);
-                            User.getUser(p).flying = false;
+            for (String booster : new ArrayList<>(boosterTimes.keySet())) {
+                int time = boosterTimes.get(booster);
+                if (time == 1) {
+                    boosterTimes.remove(booster);
+                    if (booster.equals(IridiumSkyblock.getBoosters().islandFlightBooster.name)) {
+                        for (String player : members) {
+                            Player p = Bukkit.getPlayer(player);
+                            if (p != null) {
+                                if ((!p.hasPermission("IridiumSkyblock.Fly") && !p.hasPermission("iridiumskyblock.fly")) && p.getGameMode().equals(GameMode.SURVIVAL)) {
+                                    p.setAllowFlight(false);
+                                    p.setFlying(false);
+                                    User.getUser(p).flying = false;
+                                }
+                            }
                         }
                     }
+                } else {
+                    boosterTimes.put(booster, time - 1);
                 }
             }
-            if (flightBooster > 0) flightBooster--;
         }, 0, 20);
         if (permissions == null) {
             permissions = new HashMap<Role, Permissions>() {{
@@ -710,6 +684,7 @@ public class Island {
     }
 
     private void pasteSchematic() {
+        Bukkit.getPluginManager().callEvent(new IslandRegenEvent(this));
         stackedBlocks.clear();
         for (Schematics.FakeSchematic fakeSchematic : IridiumSkyblock.getSchematics().schematicList) {
             if (!fakeSchematic.overworldData.schematic.equals(this.schematic) && !fakeSchematic.netherData.schematic.equals(this.netherschematic))
@@ -802,8 +777,8 @@ public class Island {
     }
 
     public void teleportNetherHome(Player p) {
-        Location netherHome = center.clone();
-        netherHome.setWorld(IslandManager.getNetherWorld());
+        Location netherHome = getNetherHome();
+
         if (User.getUser(p).teleportingHome) {
             return;
         }
@@ -852,6 +827,10 @@ public class Island {
                 pasteSchematic(p, false);
             }
         }
+    }
+
+    public void updateIslandData() {
+        IslandDataManager.cache.put(id, new IslandDataManager.IslandData(value, votes.size(), !visit));
     }
 
     public void delete() {
@@ -910,13 +889,13 @@ public class Island {
     public void removeVote(User user) {
         if (votes == null) votes = new HashSet<>();
         votes.remove(user.player);
-        IslandDataManager.save(this, true);
+        updateIslandData();
     }
 
     public void addVote(User user) {
         if (votes == null) votes = new HashSet<>();
         votes.add(user.player);
-        IslandDataManager.save(this, true);
+        updateIslandData();
     }
 
     public boolean hasVoted(User user) {
@@ -1051,6 +1030,10 @@ public class Island {
     public void setBiome(XBiome biome) {
         this.biome = biome;
         final World world = IslandManager.getWorld();
+        Location pos1 = this.pos1.clone();
+        Location pos2 = this.pos2.clone();
+        pos1.setWorld(world);
+        pos2.setWorld(world);
         final List<Chunk> chunks = new ArrayList<Chunk>() {{
             for (int X = pos1.getChunk().getX(); X <= pos2.getChunk().getX(); X++) {
                 for (int Z = pos1.getChunk().getZ(); Z <= pos2.getChunk().getZ(); Z++) {
@@ -1073,8 +1056,8 @@ public class Island {
         if (!IridiumSkyblock.getConfiguration().netherIslands) return;
         this.netherBiome = biome;
         final World world = IslandManager.getNetherWorld();
-        Location pos1 = this.pos1;
-        Location pos2 = this.pos2;
+        Location pos1 = this.pos1.clone();
+        Location pos2 = this.pos2.clone();
         pos1.setWorld(world);
         pos2.setWorld(world);
         biome.setBiome(pos1, pos2).thenRunAsync(() -> {
@@ -1113,7 +1096,7 @@ public class Island {
     }
 
     public void killEntities() {
-        for (Entity entity : IslandManager.getWorld().getNearbyEntities(center, IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00, 255, IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00)) {
+        for (Entity entity : IslandManager.getWorld().getNearbyEntities(center, IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00, 255, IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00)) {
             if (!entity.getType().equals(EntityType.PLAYER)) {
                 entity.remove();
             }
@@ -1122,7 +1105,7 @@ public class Island {
             Location netherCenter = center.clone();
             netherCenter.setWorld(IslandManager.getNetherWorld());
 
-            for (Entity entity : IslandManager.getNetherWorld().getNearbyEntities(netherCenter, IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00, 255, IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00)) {
+            for (Entity entity : IslandManager.getNetherWorld().getNearbyEntities(netherCenter, IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00, 255, IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00)) {
                 if (!entity.getType().equals(EntityType.PLAYER)) {
                     entity.remove();
                 }
@@ -1154,27 +1137,88 @@ public class Island {
 
             }
         }
-        User.getUser(owner).role = Role.CoOwner;
+        User.getUser(this.owner).role = Role.CoOwner;
         this.owner = owner.getUniqueId().toString();
         User.getUser(owner).role = Role.Owner;
     }
 
-    public void setSizeLevel(int sizeLevel) {
-        this.sizeLevel = sizeLevel;
-
-        pos1 = center.clone().subtract(IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00, 0, IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00);
-        pos2 = center.clone().add(IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00, 0, IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(sizeLevel).size / 2.00);
-        sendBorder();
-        setBiome(biome);
-    }
-
-    public void removeWarp(Warp warp) {
-        warps.remove(warp);
+    public void removeWarp(IslandWarp islandWarp) {
+        islandWarps.remove(islandWarp);
     }
 
     public String getName() {
         if (name == null) name = User.getUser(owner).name;
         return name;
+    }
+
+    public double getBankItem(String name) {
+        return bankItems.getOrDefault(name, 0.00);
+    }
+
+    public void setBankItem(String name, double amount) {
+        bankItems.put(name, amount);
+    }
+
+    public void addBoosterTime(String booster, int time) {
+        boosterTimes.put(booster, getBoosterTime(booster) + time);
+    }
+
+    public int getBoosterTime(String booster) {
+        return boosterTimes.getOrDefault(booster, 0);
+    }
+
+    public void setUpgradeLevel(Upgrades.Upgrade upgrade, int level) {
+        if (upgrade.getIslandUpgrade(level) == null) return;
+        upgradeLevels.put(upgrade.name, level);
+
+        pos1 = center.clone().subtract(IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00, 0, IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00);
+        pos2 = center.clone().add(IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00, 0, IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(getSizeLevel()).size / 2.00);
+        sendBorder();
+        setBiome(biome);
+    }
+
+    public int getUpgradeLevel(String upgrade) {
+        return upgradeLevels.getOrDefault(upgrade, 1);
+    }
+
+    public int getSizeLevel() {
+        return getUpgradeLevel(IridiumSkyblock.getUpgrades().islandSizeUpgrade.name);
+    }
+
+    public int getBlockLimitLevel() {
+        return getUpgradeLevel(IridiumSkyblock.getUpgrades().islandBlockLimitUpgrade.name);
+    }
+
+    public int getMemberLevel() {
+        return getUpgradeLevel(IridiumSkyblock.getUpgrades().islandMemberUpgrade.name);
+    }
+
+    public int getWarpLevel() {
+        return getUpgradeLevel(IridiumSkyblock.getUpgrades().islandWarpUpgrade.name);
+    }
+
+    public int getOreLevel() {
+        return getUpgradeLevel(IridiumSkyblock.getUpgrades().islandOresUpgrade.name);
+    }
+
+    public void setSizeLevel(int level) {
+        setUpgradeLevel(IridiumSkyblock.getUpgrades().islandSizeUpgrade, level);
+    }
+
+    public void setBlockLimitLevel(int level) {
+        setUpgradeLevel(IridiumSkyblock.getUpgrades().islandBlockLimitUpgrade, level);
+    }
+
+    public void setMemberLevel(int level) {
+        setUpgradeLevel(IridiumSkyblock.getUpgrades().islandMemberUpgrade, level);
+    }
+
+    public void setWarpLevel(int level) {
+        setUpgradeLevel(IridiumSkyblock.getUpgrades().islandWarpUpgrade, level);
+    }
+
+    public void setOreLevel(int level) {
+        setUpgradeLevel(IridiumSkyblock.getUpgrades().islandOresUpgrade, level);
     }
 
     public Map<String, Integer> getMissionLevels() {
@@ -1186,19 +1230,48 @@ public class Island {
         return Utils.NumberFormatter.format(value);
     }
 
+    public String getFormattedLevel() {
+        return Utils.NumberFormatter.format(value / IridiumSkyblock.getConfiguration().valuePerLevel);
+    }
+
+    public int getCrystals() {
+        return (int) getBankItem("crystals");
+    }
+
+    public double getMoney() {
+        return getBankItem("vault");
+    }
+
+    public int getExperience() {
+        return (int) getBankItem("experience");
+    }
+
+    public void setCrystals(int amount) {
+        setBankItem("crystals", amount);
+    }
+
+    public void setMoney(double amount) {
+        setBankItem("vault", amount);
+    }
+
+    public void setExperience(int amount) {
+        setBankItem("experience", amount);
+    }
+
     public String getFormattedMoney() {
-        return Utils.NumberFormatter.format(money);
+        return Utils.NumberFormatter.format(getMoney());
     }
 
     public String getFormattedExp() {
-        return Utils.NumberFormatter.format(exp);
+        return Utils.NumberFormatter.format(getExperience());
     }
 
     public String getFormattedCrystals() {
-        return Utils.NumberFormatter.format(crystals);
+        return Utils.NumberFormatter.format(getCrystals());
     }
 
     public void save(Connection connection) {
         IslandManager.save(this, connection);
+        IslandDataManager.save(this, connection);
     }
 }

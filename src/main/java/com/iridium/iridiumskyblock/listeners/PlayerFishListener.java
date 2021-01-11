@@ -19,7 +19,6 @@ public class PlayerFishListener implements Listener {
 
     @EventHandler
     public void onPlayerFish(PlayerFishEvent event) {
-        try {
             final Player player = event.getPlayer();
             final Location location = player.getLocation();
             if (!IslandManager.isIslandWorld(location)) return;
@@ -38,8 +37,5 @@ public class PlayerFishListener implements Listener {
                 if (level.type == MissionType.FISH_CATCH)
                     island.addMission(mission.name, 1);
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 }

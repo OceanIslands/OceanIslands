@@ -17,7 +17,7 @@ public class LanguagesCommand extends Command {
     @Override
     public void execute(CommandSender sender, String[] args) {
         Player p = (Player) sender;
-        p.openInventory(IridiumSkyblock.getInstance().getLanguagesGUI().pages.get(1).getInventory());
+        p.openInventory(IridiumSkyblock.getInstance().getLanguagesGUI().getPage(1).getInventory());
     }
 
     @Override

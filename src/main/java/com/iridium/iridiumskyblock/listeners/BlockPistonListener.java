@@ -1,7 +1,6 @@
 package com.iridium.iridiumskyblock.listeners;
 
 import com.google.common.collect.ImmutableMap;
-import com.iridium.iridiumskyblock.IridiumSkyblock;
 import com.iridium.iridiumskyblock.Island;
 import com.iridium.iridiumskyblock.managers.IslandManager;
 import org.bukkit.Location;
@@ -27,7 +26,6 @@ public class BlockPistonListener implements Listener {
 
     @EventHandler
     public void onBlockPistonExtend(BlockPistonExtendEvent event) {
-        try {
             final Block block = event.getBlock();
             final Location location = block.getLocation();
             final Island island = IslandManager.getIslandViaLocation(location);
@@ -43,14 +41,10 @@ public class BlockPistonListener implements Listener {
                     return;
                 }
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 
     @EventHandler
     public void onBlockPistonRetract(BlockPistonRetractEvent event){
-        try {
             final Block block = event.getBlock();
             final Location location = block.getLocation();
             final Island island = IslandManager.getIslandViaLocation(location);
@@ -66,14 +60,10 @@ public class BlockPistonListener implements Listener {
                     return;
                 }
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 
     @EventHandler
     public void onBlockPistonReact(BlockPistonRetractEvent event) {
-        try {
             final Block block = event.getBlock();
             final Location location = block.getLocation();
             final Island island = IslandManager.getIslandViaLocation(location);
@@ -86,8 +76,5 @@ public class BlockPistonListener implements Listener {
                     return;
                 }
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 }

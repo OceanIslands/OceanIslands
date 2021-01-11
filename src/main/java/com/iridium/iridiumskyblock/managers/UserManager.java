@@ -36,17 +36,12 @@ public class UserManager {
                 statement.close();
                 return user;
             } else {
-                //There is no value so create one
-                PreparedStatement insert = connection.prepareStatement("INSERT INTO users (UUID,json) VALUES (?,?);");
                 User user = new User(uuid);
-                insert.setString(1, uuid.toString());
-                insert.setString(2, IridiumSkyblock.getPersist().gson.toJson(user));
-                insert.executeUpdate();
-
                 cache.put(uuid, user);
+                saveUser(user, connection);
                 connection.commit();
-                statement.close();
                 connection.close();
+                statement.close();
                 return user;
             }
         } catch (SQLException throwables) {
@@ -57,9 +52,10 @@ public class UserManager {
 
     public static void saveUser(User user, Connection connection) {
         try {
-            PreparedStatement insert = connection.prepareStatement("UPDATE users SET json = ? WHERE UUID = ?;");
-            insert.setString(1, IridiumSkyblock.getPersist().gson.toJson(user));
-            insert.setString(2, user.player);
+            String json = IridiumSkyblock.getPersist().gson.toJson(user);
+            PreparedStatement insert = connection.prepareStatement("REPLACE INTO users (UUID,json) VALUES (?,?);");
+            insert.setString(1, user.player);
+            insert.setString(2, json);
             insert.executeUpdate();
             insert.close();
         } catch (SQLException throwables) {

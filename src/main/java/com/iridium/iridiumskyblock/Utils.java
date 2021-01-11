@@ -2,14 +2,13 @@ package com.iridium.iridiumskyblock;
 
 import com.cryptomorin.xseries.XMaterial;
 import com.iridium.iridiumcolorapi.IridiumColorAPI;
-import com.iridium.iridiumskyblock.Utils.TransactionLogger.Transaction;
-import com.iridium.iridiumskyblock.Utils.TransactionLogger.TransactionType;
+import com.iridium.iridiumskyblock.configs.Boosters;
 import com.iridium.iridiumskyblock.configs.Inventories;
+import com.iridium.iridiumskyblock.configs.Upgrades;
 import com.iridium.iridiumskyblock.managers.IslandManager;
 import de.tr7zw.changeme.nbtapi.NBTCompound;
 import de.tr7zw.changeme.nbtapi.NBTItem;
 import de.tr7zw.changeme.nbtapi.NBTListCompound;
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -22,14 +21,9 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -227,11 +221,18 @@ public class Utils {
     }
 
     public static boolean isBlockValuable(Block b) {
-        return IridiumSkyblock.getBlockValues().blockvalue.containsKey(XMaterial.matchXMaterial(b.getType())) || b.getState() instanceof CreatureSpawner || IridiumSkyblock.getConfiguration().limitedBlocks.containsKey(XMaterial.matchXMaterial(b.getType()));
+        for (Upgrades.IslandUpgrade islandUpgrade : IridiumSkyblock.getUpgrades().islandBlockLimitUpgrade.upgrades.values()) {
+            if (((Upgrades.IslandBlockLimitUpgrade) islandUpgrade).limitedBlocks.containsKey(XMaterial.matchXMaterial(b.getType())))
+                return true;
+        }
+        return IridiumSkyblock.getBlockValues().blockvalue.containsKey(XMaterial.matchXMaterial(b.getType())) || b.getState() instanceof CreatureSpawner;
     }
 
     public static boolean isBlockValuable(XMaterial material) {
-        return IridiumSkyblock.getBlockValues().blockvalue.containsKey(material) || IridiumSkyblock.getConfiguration().limitedBlocks.containsKey(material);
+        for (Upgrades.IslandUpgrade islandUpgrade : IridiumSkyblock.getUpgrades().islandBlockLimitUpgrade.upgrades.values()) {
+            if (((Upgrades.IslandBlockLimitUpgrade) islandUpgrade).limitedBlocks.containsKey(material)) return true;
+        }
+        return IridiumSkyblock.getBlockValues().blockvalue.containsKey(material);
     }
 
     public static List<Island> getTopIslands() {
@@ -297,60 +298,28 @@ public class Utils {
 
     public static List<Placeholder> getIslandPlaceholders(Island island) {
         List<Placeholder> placeholders = new ArrayList<>(Arrays.asList(
-                // Upgrades
-                new Placeholder("sizevaultcost", IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.containsKey(island.sizeLevel + 1) ? IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(island.sizeLevel + 1).vaultCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("membervaultcost", IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.containsKey(island.memberLevel + 1) ? IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.get(island.memberLevel + 1).vaultCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("warpvaultcost", IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.containsKey(island.warpLevel + 1) ? IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.get(island.warpLevel + 1).vaultCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("oresvaultcost", IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.containsKey(island.oreLevel + 1) ? IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.get(island.oreLevel + 1).vaultCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-
-                new Placeholder("sizecrystalscost", IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.containsKey(island.sizeLevel + 1) ? IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(island.sizeLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("membercrystalscost", IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.containsKey(island.memberLevel + 1) ? IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.get(island.memberLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("warpcrystalscost", IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.containsKey(island.warpLevel + 1) ? IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.get(island.warpLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("orescrystalscost", IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.containsKey(island.oreLevel + 1) ? IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.get(island.oreLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-
-                new Placeholder("sizecost", IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.containsKey(island.sizeLevel + 1) ? IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(island.sizeLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("membercost", IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.containsKey(island.memberLevel + 1) ? IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.get(island.memberLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("warpcost", IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.containsKey(island.warpLevel + 1) ? IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.get(island.warpLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-                new Placeholder("generatorcost", IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.containsKey(island.oreLevel + 1) ? IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.get(island.oreLevel + 1).crystalsCost + "" : IridiumSkyblock.getMessages().maxlevelreached),
-
-                new Placeholder("sizeblocks", IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(island.sizeLevel).size + ""),
-                new Placeholder("membercount", IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.get(island.memberLevel).size + ""),
-                new Placeholder("warpcount", IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.get(island.warpLevel).size + ""),
-
-                new Placeholder("sizelevel", island.sizeLevel + ""),
-                new Placeholder("memberlevel", island.memberLevel + ""),
-                new Placeholder("warplevel", island.warpLevel + ""),
-                new Placeholder("oreslevel", island.oreLevel + ""),
-                new Placeholder("generatorlevel", island.oreLevel + ""),
-                // Boosters
-                new Placeholder("spawnerbooster", island.spawnerBooster + ""),
-                new Placeholder("farmingbooster", island.farmingBooster + ""),
-                new Placeholder("expbooster", island.expBooster + ""),
-                new Placeholder("flightbooster", island.flightBooster + ""),
-
-                new Placeholder("spawnerbooster_seconds", island.spawnerBooster % 60 + ""),
-                new Placeholder("farmingbooster_seconds", island.farmingBooster % 60 + ""),
-                new Placeholder("expbooster_seconds", island.expBooster % 60 + ""),
-                new Placeholder("flightbooster_seconds", island.flightBooster % 60 + ""),
-                new Placeholder("spawnerbooster_minutes", (int) Math.floor(island.spawnerBooster / 60.00) + ""),
-                new Placeholder("farmingbooster_minutes", (int) Math.floor(island.farmingBooster / 60.00) + ""),
-                new Placeholder("expbooster_minutes", (int) Math.floor(island.expBooster / 60.00) + ""),
-                new Placeholder("flightbooster_minutes", (int) Math.floor(island.flightBooster / 60.00) + ""),
-                new Placeholder("spawnerbooster_crystalcost", IridiumSkyblock.getBoosters().spawnerBooster.crystalsCost + ""),
-                new Placeholder("farmingbooster_crystalcost", IridiumSkyblock.getBoosters().farmingBooster.crystalsCost + ""),
-                new Placeholder("expbooster_crystalcost", IridiumSkyblock.getBoosters().experianceBooster.crystalsCost + ""),
-                new Placeholder("flightbooster_crystalcost", IridiumSkyblock.getBoosters().flightBooster.crystalsCost + ""),
-                new Placeholder("spawnerbooster_vaultcost", IridiumSkyblock.getBoosters().spawnerBooster.vaultCost + ""),
-                new Placeholder("farmingbooster_vaultcost", IridiumSkyblock.getBoosters().farmingBooster.vaultCost + ""),
-                new Placeholder("expbooster_vaultcost", IridiumSkyblock.getBoosters().experianceBooster.vaultCost + ""),
-                new Placeholder("flightbooster_vaultcost", IridiumSkyblock.getBoosters().flightBooster.vaultCost + ""),
-
-                //Bank
                 new Placeholder("experience", island.getFormattedExp()),
                 new Placeholder("crystals", island.getFormattedCrystals()),
                 new Placeholder("money", island.getFormattedMoney()),
                 new Placeholder("value", island.getFormattedValue())
         ));
+        for (Upgrades.Upgrade upgrade : IridiumSkyblock.getInstance().getIslandUpgrades()) {
+            int level = island.getUpgradeLevel(upgrade.name);
+            placeholders.add(new Placeholder(upgrade.name + "vaultcost", upgrade.getIslandUpgrade(level + 1) != null ? Integer.toString(upgrade.getIslandUpgrade(level + 1).vaultCost) : IridiumSkyblock.getMessages().maxlevelreached));
+            placeholders.add(new Placeholder(upgrade.name + "crystalscost", upgrade.getIslandUpgrade(level + 1) != null ? Integer.toString(upgrade.getIslandUpgrade(level + 1).crystalsCost) : IridiumSkyblock.getMessages().maxlevelreached));
+            placeholders.add(new Placeholder(upgrade.name + "level", Integer.toString(level)));
+            if (upgrade.getIslandUpgrade(level).size != null) {
+                placeholders.add(new Placeholder(upgrade.name + "blocks", Integer.toString(upgrade.getIslandUpgrade(level).size)));
+                placeholders.add(new Placeholder(upgrade.name + "count", Integer.toString(upgrade.getIslandUpgrade(level).size)));
+            }
+        }
+        for (Boosters.Booster booster : IridiumSkyblock.getInstance().getIslandBoosters()) {
+            placeholders.add(new Placeholder(booster.name + "booster", Integer.toString(island.getBoosterTime(booster.name))));
+            placeholders.add(new Placeholder(booster.name + "booster_seconds", Integer.toString(island.getBoosterTime(booster.name) % 60)));
+            placeholders.add(new Placeholder(booster.name + "booster_minutes", Integer.toString((int) Math.floor(island.getBoosterTime(booster.name) / 60.00))));
+            placeholders.add(new Placeholder(booster.name + "booster_crystalcost", Integer.toString(booster.crystalsCost)));
+            placeholders.add(new Placeholder(booster.name + "booster_vaultcost", Integer.toString(booster.vaultCost)));
+        }
         return placeholders;
     }
 
@@ -377,9 +346,9 @@ public class Utils {
         User u = User.getUser(p);
         Island island = u.getIsland();
         if (island != null) {
-            island.crystals += crystals;
+            island.setCrystals(island.getCrystals() + crystals);
             if (IridiumSkyblock.getInstance().getEconomy() == null) {
-                island.money += vault;
+                island.setMoney(island.getMoney() + vault);
             } else {
                 IridiumSkyblock.getInstance().getEconomy().depositPlayer(p, vault);
             }
@@ -390,37 +359,34 @@ public class Utils {
             }
             IridiumSkyblock.getInstance().getEconomy().depositPlayer(p, vault);
         }
-        TransactionLogger.saveTransaction(p, new Transaction().add(TransactionType.MONEY, vault).add(TransactionType.CRYSTALS, crystals));
     }
 
-    public static BuyResponce canBuy(Player p, double vault, int crystals) {
+    public static BuyResponse canBuy(Player p, double vault, int crystals) {
         User u = User.getUser(p);
         Island island = u.getIsland();
         if (island != null) {
-            if (island.crystals < crystals) return BuyResponce.NOT_ENOUGH_CRYSTALS;
+            if (island.getCrystals() < crystals) return BuyResponse.NOT_ENOUGH_CRYSTALS;
             if (IridiumSkyblock.getInstance().getEconomy() != null) {
                 if (IridiumSkyblock.getInstance().getEconomy().getBalance(p) >= vault) {
                     IridiumSkyblock.getInstance().getEconomy().withdrawPlayer(p, vault);
-                    island.crystals -= crystals;
-                    TransactionLogger.saveTransaction(p, new Transaction().add(TransactionType.MONEY, -vault).add(TransactionType.CRYSTALS, -crystals));
-                    return BuyResponce.SUCCESS;
+                    island.setCrystals(island.getCrystals() - crystals);
+                    return BuyResponse.SUCCESS;
                 }
             }
-            if (island.money >= vault) {
-                island.money -= vault;
-                island.crystals -= crystals;
-                TransactionLogger.saveTransaction(p, new Transaction().add(TransactionType.MONEY, -vault).add(TransactionType.CRYSTALS, -crystals));
-                return BuyResponce.SUCCESS;
+            if (island.getMoney() >= vault) {
+                island.setMoney(island.getMoney() - vault);
+                island.setCrystals(island.getCrystals() - crystals);
+                return BuyResponse.SUCCESS;
             }
+            return BuyResponse.NOT_ENOUGH_VAULT;
         }
         if (IridiumSkyblock.getInstance().getEconomy() != null) {
             if (IridiumSkyblock.getInstance().getEconomy().getBalance(p) >= vault && crystals == 0) {
                 IridiumSkyblock.getInstance().getEconomy().withdrawPlayer(p, vault);
-                TransactionLogger.saveTransaction(p, new Transaction().add(TransactionType.MONEY, -vault));
-                return BuyResponce.SUCCESS;
+                return BuyResponse.SUCCESS;
             }
         }
-        return crystals == 0 ? BuyResponce.NOT_ENOUGH_VAULT : BuyResponce.NOT_ENOUGH_CRYSTALS;
+        return crystals == 0 ? BuyResponse.NOT_ENOUGH_VAULT : BuyResponse.NOT_ENOUGH_CRYSTALS;
     }
 
     public static int getExpAtLevel(final int level) {
@@ -501,15 +467,43 @@ public class Utils {
         }
     }
 
-    public static boolean hasOpenSlot(Inventory inv) {
-        for (ItemStack item : inv.getContents()) {
-            if (item == null) {
-                return true;
-            } else if (item.getType() == Material.AIR) {
-                return true;
+    public static int getAmount(Inventory inventory, XMaterial materials) {
+        int total = 0;
+        for (ItemStack item : inventory.getContents()) {
+            if (item == null) continue;
+            if (materials.isSimilar(item)) {
+                total += item.getAmount();
             }
         }
-        return false;
+        return total;
+    }
+
+    public static void removeAmount(Inventory inventory, XMaterial material, int amount) {
+        int removed = 0;
+        int index = 0;
+        for (ItemStack itemStack : inventory.getContents()) {
+            if (itemStack == null) {
+                index++;
+                continue;
+            }
+            if (removed >= amount) break;
+            if (itemStack != null) {
+                if (material.isSimilar(itemStack)) {
+                    if (removed + itemStack.getAmount() <= amount) {
+                        removed += itemStack.getAmount();
+                        inventory.setItem(index, null);
+                    } else {
+                        itemStack.setAmount(itemStack.getAmount() - (amount - removed));
+                        removed += amount;
+                    }
+                }
+            }
+            index++;
+        }
+    }
+
+    public static boolean hasOpenSlot(Inventory inv) {
+        return inv.firstEmpty() == -1;
     }
 
     public static XMaterial getXMaterialFromId(int id, byte data) {
@@ -547,7 +541,7 @@ public class Utils {
         }
     }
 
-    public static enum BuyResponce {
+    public enum BuyResponse {
         SUCCESS,
         NOT_ENOUGH_CRYSTALS,
         NOT_ENOUGH_VAULT
@@ -614,116 +608,6 @@ public class Utils {
             }
 
             return outputStringBuilder.toString();
-        }
-    }
-
-    public static class TransactionLogger {
-        public enum TransactionType {
-            MONEY,
-            CRYSTALS,
-            EXPERIENCE;
-
-            @Override
-            public String toString() {
-                return WordUtils.capitalize(name().toLowerCase());
-            }
-        }
-
-        public static class Transaction {
-            private final Map<TransactionType, Double> transactionAmounts = new HashMap<>();
-
-            public Transaction add(TransactionType type, double amount) {
-                transactionAmounts.put(type, amount);
-                return this;
-            }
-
-            public double getTransactionAmount() {
-                return transactionAmounts.values().stream().filter(value -> value != 0).findAny().orElse(0.0);
-            }
-
-            @Override
-            public String toString() {
-                String[] transactionParts = transactionAmounts.keySet().stream()
-                        .filter(type -> transactionAmounts.get(type) != 0)
-                        .map(type -> Math.abs(transactionAmounts.get(type)) + " " + type.toString())
-                        .toArray(String[]::new);
-                return String.join(", ", transactionParts);
-            }
-
-        }
-
-        /**
-         * @param transaction positive amount = sale, negative amount = purchase
-         */
-        public static void saveTransaction(Player player, Transaction transaction) {
-            if (!IridiumSkyblock.getConfiguration().logTransactions) {
-                return;
-            }
-
-            if (transaction.transactionAmounts.isEmpty()) {
-                return;
-            }
-
-            if (transaction.getTransactionAmount() == 0) {
-                return;
-            }
-
-            StringBuilder logEntry = new StringBuilder();
-            addTimestamp(logEntry);
-            addPlayerInfo(logEntry, player);
-            logEntry.append(transaction.getTransactionAmount() < 0 ? "Purchased for " : "Sold for ");
-            logEntry.append(transaction.toString());
-
-            appendToFile(logEntry);
-        }
-
-        /**
-         * @param transaction positive amount = deposit, negative amount = withdraw
-         */
-        public static void saveBankBalanceChange(Player player, Transaction transaction) {
-            if (!IridiumSkyblock.getConfiguration().logBankBalanceChange) {
-                return;
-            }
-
-            if (transaction.transactionAmounts.isEmpty()) {
-                return;
-            }
-
-            if (transaction.getTransactionAmount() == 0) {
-                return;
-            }
-
-            StringBuilder logEntry = new StringBuilder();
-            addTimestamp(logEntry);
-            addPlayerInfo(logEntry, player);
-            logEntry.append(transaction.getTransactionAmount() < 0 ? "Withdrew " : "Deposited ");
-            logEntry.append(transaction.toString());
-
-            appendToFile(logEntry);
-        }
-
-        private static void addTimestamp(StringBuilder stringBuilder) {
-            // Append: Year-Month-Day Hour:Minute:Second
-            Date currentDate = new Date(System.currentTimeMillis());
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            stringBuilder.append("[").append(dateFormat.format(currentDate)).append("] ");
-        }
-
-        private static void addPlayerInfo(StringBuilder stringBuilder, Player player) {
-            // Append: PlayerName (PlayerUUID):
-            stringBuilder.append(player.getName()).append(" (").append(player.getUniqueId().toString()).append("): ");
-        }
-
-        private static void appendToFile(StringBuilder logEntry) {
-            logEntry.append("\r\n");
-            Path path = Paths.get("plugins", "IridiumSkyblock", "logs", "transactions.log");
-
-            try {
-                path.getParent().toFile().mkdirs();
-                Files.write(path, logEntry.toString().getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-            } catch (IOException exception) {
-                exception.printStackTrace();
-            }
         }
     }
 

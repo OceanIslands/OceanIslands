@@ -21,34 +21,30 @@ public class EntityDeathListener implements Listener {
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
-        try {
-            final LivingEntity entity = event.getEntity();
-            final Player killer = entity.getKiller();
-            if (killer == null) return;
+        final LivingEntity entity = event.getEntity();
+        final Player killer = entity.getKiller();
+        if (killer == null) return;
 
-            final Location location = killer.getLocation();
-            if (!IslandManager.isIslandWorld(location)) return;
+        final Location location = killer.getLocation();
+        if (!IslandManager.isIslandWorld(location)) return;
 
-            final User user = User.getUser(killer);
-            final Island userIsland = user.getIsland();
-            if (userIsland == null) return;
+        final User user = User.getUser(killer);
+        final Island userIsland = user.getIsland();
+        if (userIsland == null) return;
 
-            for (Mission mission : IridiumSkyblock.getMissions().missions) {
-                final Map<String, Integer> levels = userIsland.getMissionLevels();
-                levels.putIfAbsent(mission.name, 1);
+        for (Mission mission : IridiumSkyblock.getMissions().missions) {
+            final Map<String, Integer> levels = userIsland.getMissionLevels();
+            levels.putIfAbsent(mission.name, 1);
 
-                final MissionData level = mission.levels.get(levels.get(mission.name));
-                if (level.type != MissionType.ENTITY_KILL) continue;
+            final MissionData level = mission.levels.get(levels.get(mission.name));
+            if (level.type != MissionType.ENTITY_KILL) continue;
 
-                final List<String> conditions = level.conditions;
-                if (conditions.isEmpty() || conditions.contains(entity.getName()) || conditions.contains(entity.toString()))
-                    userIsland.addMission(mission.name, 1);
-            }
-
-            if (userIsland.expBooster != 0)
-                event.setDroppedExp(event.getDroppedExp() * 2);
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
+            final List<String> conditions = level.conditions;
+            if (conditions.isEmpty() || conditions.contains(entity.getName()) || conditions.contains(entity.toString()))
+                userIsland.addMission(mission.name, 1);
         }
+
+        if (userIsland.getBoosterTime(IridiumSkyblock.getBoosters().islandExperienceBooster.name) != 0)
+            event.setDroppedExp(event.getDroppedExp() * 2);
     }
 }

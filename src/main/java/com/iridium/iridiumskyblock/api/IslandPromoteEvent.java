@@ -7,9 +7,9 @@ import org.bukkit.event.Cancellable;
 import org.jetbrains.annotations.NotNull;
 
 public class IslandPromoteEvent extends IslandEvent implements Cancellable {
-    @NotNull public final User target;
-    @NotNull public final User promoter;
-    @NotNull public final Role role;
+    @NotNull private final User target;
+    @NotNull private final User promoter;
+    @NotNull private final Role role;
     private boolean cancelled;
 
     public IslandPromoteEvent(@NotNull Island island, @NotNull User target, @NotNull User promoter, @NotNull Role role) {
@@ -29,4 +29,15 @@ public class IslandPromoteEvent extends IslandEvent implements Cancellable {
         this.cancelled = b;
     }
 
+    public User getTarget() {
+        return target;
+    }
+
+    public User getPromoter() {
+        return promoter;
+    }
+
+    public Role getRole() {
+        return role;
+    }
 }

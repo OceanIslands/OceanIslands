@@ -2,6 +2,7 @@ package com.iridium.iridiumskyblock.gui;
 
 import com.iridium.iridiumskyblock.*;
 import com.iridium.iridiumskyblock.api.IslandDemoteEvent;
+import com.iridium.iridiumskyblock.api.IslandKickEvent;
 import com.iridium.iridiumskyblock.api.IslandPromoteEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
@@ -40,7 +41,8 @@ public class MembersGUI extends GUI implements Listener {
                 setItem(i, head);
                 i++;
             }
-            if (IridiumSkyblock.getInventories().backButtons) setItem(getInventory().getSize() - 5, Utils.makeItem(IridiumSkyblock.getInventories().back));
+            if (IridiumSkyblock.getInventories().backButtons)
+                setItem(getInventory().getSize() - 5, Utils.makeItem(IridiumSkyblock.getInventories().back));
         }
     }
 
@@ -64,11 +66,15 @@ public class MembersGUI extends GUI implements Listener {
                             if (u.getRole().rank < user.role.rank) {
                                 if (u.getRole().equals(Role.Member)) {
                                     if (island.getPermissions(user.role).kickMembers) {
-                                        island.removeUser(u);
-                                        getInventory().clear();
-                                        Player player = Bukkit.getPlayer(u.name);
-                                        if (player != null)
-                                            player.sendMessage(Utils.color(IridiumSkyblock.getMessages().youHaveBeenKicked.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                                        IslandKickEvent islandKickEvent = new IslandKickEvent(user.getIsland(), user, u);
+                                        Bukkit.getPluginManager().callEvent(islandKickEvent);
+                                        if (!islandKickEvent.isCancelled()) {
+                                            island.removeUser(u);
+                                            getInventory().clear();
+                                            Player player = Bukkit.getPlayer(u.name);
+                                            if (player != null)
+                                                player.sendMessage(Utils.color(IridiumSkyblock.getMessages().youHaveBeenKicked.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                                        }
                                     } else {
                                         e.getWhoClicked().sendMessage(Utils.color(IridiumSkyblock.getMessages().noPermission.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
                                     }

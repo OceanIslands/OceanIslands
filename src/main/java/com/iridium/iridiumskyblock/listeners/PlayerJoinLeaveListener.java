@@ -16,7 +16,6 @@ public class PlayerJoinLeaveListener implements Listener {
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
-        try {
             final Player player = event.getPlayer();
             final IridiumSkyblock plugin = IridiumSkyblock.getInstance();
             if (player.isOp()) {
@@ -53,7 +52,7 @@ public class PlayerJoinLeaveListener implements Listener {
 
             if (!IslandManager.isIslandWorld(location)) return;
 
-            if (user.flying && (user.getIsland() == null || user.getIsland().flightBooster == 0)) {
+            if (user.flying && (user.getIsland() == null || user.getIsland().getBoosterTime(IridiumSkyblock.getBoosters().islandFlightBooster.name) == 0)) {
                 player.setAllowFlight(false);
                 player.setFlying(false);
                 user.flying = false;
@@ -66,9 +65,6 @@ public class PlayerJoinLeaveListener implements Listener {
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> island.sendBorder(player), 1);
             Bukkit.getScheduler().runTaskLater(plugin, () -> island.sendHolograms(player), 1);
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 
 }

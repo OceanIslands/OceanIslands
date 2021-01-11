@@ -35,7 +35,7 @@ public class AdminCommand extends Command {
             int id = Integer.parseInt(args[1]);
             island = IslandManager.getIslandViaId(id);
             if (island != null) {
-                for (com.iridium.iridiumskyblock.commands.Command command : IridiumSkyblock.getCommandManager().commands) {
+                for (Command command : IridiumSkyblock.getCommandManager().commands) {
                     if (command.aliases.contains(args[2]) && command.enabled) {
                         if ((sender.hasPermission(command.permission) || command.permission.equalsIgnoreCase("") || command.permission.equalsIgnoreCase("iridiumskyblock.")) && command.enabled) {
                             command.admin(sender, args, island);

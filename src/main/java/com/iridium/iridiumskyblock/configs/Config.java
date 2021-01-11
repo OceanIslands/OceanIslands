@@ -5,13 +5,10 @@ import com.cryptomorin.xseries.XMaterial;
 import com.iridium.iridiumskyblock.MissionRestart;
 import com.iridium.iridiumskyblock.Permissions;
 import com.iridium.iridiumskyblock.Role;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 import org.bukkit.entity.EntityType;
+
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class Config {
     public String prefix = "&b&lOceanIslands &8»";
@@ -26,6 +23,7 @@ public class Config {
     public String millionAbbreviation = "M";
     public String billionAbbreviation = "B";
     public String mainCommandPerm = "";
+    public boolean respawnAtIslandHome = false;
     public boolean createCooldown = true;
     public boolean bankWithdrawing = true;
     public boolean islandShop = true;
@@ -33,7 +31,7 @@ public class Config {
     public boolean defaultIslandPublic = true;
     public boolean netherIslands = true;
     public boolean publicNetherPortals = true;
-    public boolean forceShortPortalRadius = true;
+    public boolean netherPortalCreation = true;
     public boolean islandMenu = true;
     public boolean voidTeleport = true;
     public boolean notifyAvailableUpdate = true;
@@ -57,6 +55,7 @@ public class Config {
     public boolean enableBlockStacking = true;
     public boolean stripTopIslandPlaceholderColors = true;
     public boolean denyNaturalSpawnWhitelist = false;
+    public boolean stackableBoosters = true;
     public boolean netherLavaOcean = true;
     public int deleteBackupsAfterDays = 7;
     public int regenCooldown = 3600;
@@ -79,6 +78,7 @@ public class Config {
     public XBiome defaultNetherBiome = XBiome.NETHER_WASTES;
     public MissionRestart missionRestart = MissionRestart.Daily;
     public String worldSpawn = "world";
+
     public Map<Role, Permissions> defaultPermissions = new HashMap<Role, Permissions>() {{
         for (Role role : Role.values()) {
             if (role == Role.Visitor) {
@@ -101,14 +101,6 @@ public class Config {
         put(10, 25);
     }};
 
-    public Map<XMaterial, Integer> limitedBlocks = new HashMap<XMaterial, Integer>() {{
-        put(XMaterial.HOPPER, 50);
-        put(XMaterial.SPAWNER, 10);
-    }};
-
-    public Map<XMaterial, Double> blockvalue = null;
-    public Map<String, Double> spawnervalue = null;
-    public List<XBiome> biomes = null;
     public Map<XBiome, BiomeConfig> islandBiomes = new HashMap<XBiome, BiomeConfig>() {{
         for (XBiome biome : XBiome.VALUES.stream().filter(biome -> !biome.equals(XBiome.THE_VOID)).collect(Collectors.toList())) {
             put(biome, new BiomeConfig());

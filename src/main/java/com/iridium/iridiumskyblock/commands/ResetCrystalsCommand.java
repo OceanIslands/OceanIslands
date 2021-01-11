@@ -27,7 +27,7 @@ public class ResetCrystalsCommand extends Command {
         if (player != null) {
             Island island = User.getUser(player).getIsland();
             if (island != null) {
-                island.crystals = 0;
+                island.setCrystals(0);
                 sender.sendMessage(Utils.color(IridiumSkyblock.getMessages().resetCrystals.replace("%crystals%", args[1]).replace("%player%", player.getName()).replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
             } else {
                 sender.sendMessage(Utils.color(IridiumSkyblock.getMessages().playerNoIsland.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));

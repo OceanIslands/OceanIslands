@@ -51,25 +51,12 @@ public class IslandManager {
         c.add(Calendar.SECOND, IridiumSkyblock.getConfiguration().regenCooldown);
         user.lastCreate = c.getTime();
 
-        Location pos1 = nextLocation.clone().subtract((IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(1).size / 2.00), 0, (IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(1).size / 2.00));
-        Location pos2 = nextLocation.clone().add((IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(1).size / 2.00), 0, (IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(1).size / 2.00));
+        Location pos1 = nextLocation.clone().subtract((IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(1).size / 2.00), 0, (IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(1).size / 2.00));
+        Location pos2 = nextLocation.clone().add((IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(1).size / 2.00), 0, (IridiumSkyblock.getUpgrades().islandSizeUpgrade.getIslandUpgrade(1).size / 2.00));
         Location center = nextLocation.clone().add(0, 100, 0);
         Location home = nextLocation.clone();
         Island island = new Island(player, pos1, pos2, center, home, nextID);
-        Bukkit.getScheduler().runTaskAsynchronously(IridiumSkyblock.getInstance(), () -> {
-            try {
-                Connection connection = IridiumSkyblock.getSqlManager().getConnection();
-                PreparedStatement insert = connection.prepareStatement("INSERT INTO islands (id,json) VALUES (?,?);");
-                insert.setInt(1, island.id);
-                insert.setString(2, IridiumSkyblock.getPersist().gson.toJson(island));
-                insert.executeUpdate();
-                insert.close();
-                connection.commit();
-                connection.close();
-            } catch (SQLException throwables) {
-                throwables.printStackTrace();
-            }
-        });
+        island.updateIslandData();
 
         cache.put(nextID, island);
 
@@ -112,10 +99,7 @@ public class IslandManager {
                 length++;
             }
         }
-
         nextID++;
-
-        IridiumSkyblock.getInstance().saveData(true);
     }
 
     public static int purgeIslands(int days, CommandSender sender) {
@@ -250,9 +234,10 @@ public class IslandManager {
 
     public static void save(Island island, Connection connection) {
         try {
-            PreparedStatement insert = connection.prepareStatement("UPDATE islands SET json = ? WHERE id = ?;");
-            insert.setString(1, IridiumSkyblock.getPersist().gson.toJson(island));
-            insert.setInt(2, island.id);
+            String json = IridiumSkyblock.getPersist().gson.toJson(island);
+            PreparedStatement insert = connection.prepareStatement("REPLACE INTO islands (id,json) VALUES (?,?);");
+            insert.setInt(1, island.id);
+            insert.setString(2, json);
             insert.executeUpdate();
             insert.close();
         } catch (SQLException throwables) {

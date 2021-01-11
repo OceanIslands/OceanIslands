@@ -24,14 +24,11 @@ public class UpgradeGUI extends GUI implements Listener {
         if (getInventory().getViewers().isEmpty()) return;
         Island island = getIsland();
         if (island != null) {
-            if (IridiumSkyblock.getUpgrades().sizeUpgrade.enabled)
-                setItem(IridiumSkyblock.getUpgrades().sizeUpgrade.slot, Utils.makeItemHidden(IridiumSkyblock.getInventories().size, getIsland()));
-            if (IridiumSkyblock.getUpgrades().memberUpgrade.enabled)
-                setItem(IridiumSkyblock.getUpgrades().memberUpgrade.slot, Utils.makeItemHidden(IridiumSkyblock.getInventories().member, getIsland()));
-            if (IridiumSkyblock.getUpgrades().warpUpgrade.enabled)
-                setItem(IridiumSkyblock.getUpgrades().warpUpgrade.slot, Utils.makeItemHidden(IridiumSkyblock.getInventories().warp, getIsland()));
-            if (IridiumSkyblock.getUpgrades().oresUpgrade.enabled)
-                setItem(IridiumSkyblock.getUpgrades().oresUpgrade.slot, Utils.makeItemHidden(IridiumSkyblock.getInventories().ores, getIsland()));
+            for (Upgrades.Upgrade upgrade : IridiumSkyblock.getInstance().getIslandUpgrades()) {
+                if (upgrade.enabled) {
+                    setItem(upgrade.item.slot, Utils.makeItemHidden(upgrade.item, getIsland()));
+                }
+            }
             if (IridiumSkyblock.getInventories().backButtons)
                 setItem(getInventory().getSize() - 5, Utils.makeItem(IridiumSkyblock.getInventories().back));
         }
@@ -56,60 +53,22 @@ public class UpgradeGUI extends GUI implements Listener {
             if (e.getSlot() == getInventory().getSize() - 5 && IridiumSkyblock.getInventories().backButtons) {
                 e.getWhoClicked().openInventory(getIsland().islandMenuGUI.getInventory());
             }
-            if (e.getSlot() == IridiumSkyblock.getUpgrades().sizeUpgrade.slot && IridiumSkyblock.getUpgrades().sizeUpgrade.enabled) {
-                if (IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.containsKey(getIsland().sizeLevel + 1)) {
-                    Upgrades.IslandUpgrade upgrade = IridiumSkyblock.getUpgrades().sizeUpgrade.upgrades.get(getIsland().sizeLevel + 1);
-                    Utils.BuyResponce responce = Utils.canBuy(p, upgrade.vaultCost, upgrade.crystalsCost);
-                    if (responce == Utils.BuyResponce.SUCCESS) {
-                        sendMessage(p, "Size", getIsland().sizeLevel, getIsland().sizeLevel + 1);
-                        getIsland().setSizeLevel(getIsland().sizeLevel + 1);
+            for (Upgrades.Upgrade upgrade : IridiumSkyblock.getInstance().getIslandUpgrades()) {
+                int level = getIsland().getUpgradeLevel(upgrade.name);
+                if (e.getSlot() == upgrade.item.slot && upgrade.enabled) {
+                    Upgrades.IslandUpgrade islandUpgrade = upgrade.getIslandUpgrade(level + 1);
+                    if (islandUpgrade != null) {
+                        Utils.BuyResponse response = Utils.canBuy(p, islandUpgrade.vaultCost, islandUpgrade.crystalsCost);
+                        if (response == Utils.BuyResponse.SUCCESS) {
+                            sendMessage(p, upgrade.name, level, level + 1);
+                            getIsland().setUpgradeLevel(upgrade, level + 1);
+                        } else {
+                            p.sendMessage(Utils.color(response == Utils.BuyResponse.NOT_ENOUGH_VAULT ? IridiumSkyblock.getMessages().cantBuy : IridiumSkyblock.getMessages().notEnoughCrystals.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                        }
                     } else {
-                        p.sendMessage(Utils.color(responce == Utils.BuyResponce.NOT_ENOUGH_VAULT ? IridiumSkyblock.getMessages().cantBuy : IridiumSkyblock.getMessages().notEnoughCrystals.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                        e.getWhoClicked().sendMessage(Utils.color(IridiumSkyblock.getMessages().maxLevelReached.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
                     }
-                } else {
-                    e.getWhoClicked().sendMessage(Utils.color(IridiumSkyblock.getMessages().maxLevelReached.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                }
-            }
-            if (e.getSlot() == IridiumSkyblock.getUpgrades().memberUpgrade.slot && IridiumSkyblock.getUpgrades().memberUpgrade.enabled) {
-                if (IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.containsKey(getIsland().memberLevel + 1)) {
-                    Upgrades.IslandUpgrade upgrade = IridiumSkyblock.getUpgrades().memberUpgrade.upgrades.get(getIsland().memberLevel + 1);
-                    Utils.BuyResponce responce = Utils.canBuy(p, upgrade.vaultCost, upgrade.crystalsCost);
-                    if (responce == Utils.BuyResponce.SUCCESS) {
-                        sendMessage(p, "Member", getIsland().memberLevel, getIsland().memberLevel + 1);
-                        getIsland().memberLevel++;
-                    } else {
-                        p.sendMessage(Utils.color(responce == Utils.BuyResponce.NOT_ENOUGH_VAULT ? IridiumSkyblock.getMessages().cantBuy : IridiumSkyblock.getMessages().notEnoughCrystals.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                    }
-                } else {
-                    e.getWhoClicked().sendMessage(Utils.color(IridiumSkyblock.getMessages().maxLevelReached.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                }
-            }
-            if (e.getSlot() == IridiumSkyblock.getUpgrades().warpUpgrade.slot && IridiumSkyblock.getUpgrades().warpUpgrade.enabled) {
-                if (IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.containsKey(getIsland().warpLevel + 1)) {
-                    Upgrades.IslandUpgrade upgrade = IridiumSkyblock.getUpgrades().warpUpgrade.upgrades.get(getIsland().warpLevel + 1);
-                    Utils.BuyResponce responce = Utils.canBuy(p, upgrade.vaultCost, upgrade.crystalsCost);
-                    if (responce == Utils.BuyResponce.SUCCESS) {
-                        sendMessage(p, "Warp", getIsland().warpLevel, getIsland().warpLevel + 1);
-                        getIsland().warpLevel = getIsland().warpLevel + 1;
-                    } else {
-                        p.sendMessage(Utils.color(responce == Utils.BuyResponce.NOT_ENOUGH_VAULT ? IridiumSkyblock.getMessages().cantBuy : IridiumSkyblock.getMessages().notEnoughCrystals.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                    }
-                } else {
-                    e.getWhoClicked().sendMessage(Utils.color(IridiumSkyblock.getMessages().maxLevelReached.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                }
-            }
-            if (e.getSlot() == IridiumSkyblock.getUpgrades().oresUpgrade.slot && IridiumSkyblock.getUpgrades().oresUpgrade.enabled) {
-                if (IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.containsKey(getIsland().oreLevel + 1)) {
-                    Upgrades.IslandUpgrade upgrade = IridiumSkyblock.getUpgrades().oresUpgrade.upgrades.get(getIsland().oreLevel + 1);
-                    Utils.BuyResponce responce = Utils.canBuy(p, upgrade.vaultCost, upgrade.crystalsCost);
-                    if (responce == Utils.BuyResponce.SUCCESS) {
-                        sendMessage(p, "Ore", getIsland().oreLevel, getIsland().oreLevel + 1);
-                        getIsland().oreLevel++;
-                    } else {
-                        p.sendMessage(Utils.color(responce == Utils.BuyResponce.NOT_ENOUGH_VAULT ? IridiumSkyblock.getMessages().cantBuy : IridiumSkyblock.getMessages().notEnoughCrystals.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                    }
-                } else {
-                    e.getWhoClicked().sendMessage(Utils.color(IridiumSkyblock.getMessages().maxLevelReached.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                    return;
                 }
             }
         }

@@ -5,7 +5,6 @@ import com.iridium.iridiumskyblock.Island;
 import com.iridium.iridiumskyblock.User;
 import com.iridium.iridiumskyblock.managers.IslandManager;
 import org.bukkit.GameMode;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -13,16 +12,12 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 public class EntityTargetLivingEntityListener implements Listener {
-
-    private final Map<Entity, Long> entityTargetCooldowns = new HashMap<>();
 
     @EventHandler
     public void onEntityTargetEntity(EntityTargetLivingEntityEvent event) {
@@ -50,10 +45,6 @@ public class EntityTargetLivingEntityListener implements Listener {
 
         // Check if this entity is allowed to target an entity
         LivingEntity entity = (LivingEntity) event.getEntity();
-        if (isOnTargetCooldown(entity)) {
-            event.setCancelled(true);
-            return;
-        }
 
         // Check if the player is a guest
         User user = User.getUser(targetedPlayer);
@@ -80,24 +71,6 @@ public class EntityTargetLivingEntityListener implements Listener {
                 event.setTarget(nextTarget);
             }
         }
-    }
-
-    private boolean isOnTargetCooldown(Entity entity) {
-        // Check if the entity has a cooldown, add it if not
-        if (!entityTargetCooldowns.containsKey(entity)) {
-            entityTargetCooldowns.put(entity, System.currentTimeMillis());
-            return false;
-        }
-
-        // Check if the time of the existing cooldown has passed
-        // The current time has to be higher than the creation time of the cooldown + the time of the cooldown in milliseconds
-        if (System.currentTimeMillis() >= entityTargetCooldowns.get(entity) + IridiumSkyblock.getConfiguration().intervalBetweenMobTarget * 1000L) {
-            entityTargetCooldowns.remove(entity);
-            return false;
-        }
-
-        // The entity is on cooldown
-        return true;
     }
 
 }

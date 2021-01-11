@@ -68,13 +68,9 @@ public class SchematicSelectGUI extends GUI implements Listener {
                     if (IridiumSkyblock.getConfiguration().restartUpgradesOnRegen) {
                         getIsland().resetMissions();
                         getIsland().setSizeLevel(1);
-                        getIsland().memberLevel = 1;
-                        getIsland().warpLevel = 1;
-                        getIsland().oreLevel = 1;
-                        getIsland().flightBooster = 0;
-                        getIsland().expBooster = 0;
-                        getIsland().farmingBooster = 0;
-                        getIsland().spawnerBooster = 0;
+                        getIsland().setMemberLevel(1);
+                        getIsland().setWarpLevel(1);
+                        getIsland().setOreLevel(1);
                     }
                     return;
                 }

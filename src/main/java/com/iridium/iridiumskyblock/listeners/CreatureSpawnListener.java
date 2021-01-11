@@ -13,20 +13,16 @@ public class CreatureSpawnListener implements Listener {
 
     @EventHandler
     public void onCreatureSpawnEvent(CreatureSpawnEvent event) {
-        try {
-            final Config config = IridiumSkyblock.getConfiguration();
-            if (config.denyNaturalSpawn.isEmpty() || event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL)
-                return;
+        final Config config = IridiumSkyblock.getConfiguration();
+        if (config.denyNaturalSpawn.isEmpty() || event.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL)
+            return;
 
-            final Entity entity = event.getEntity();
-            final Location location = entity.getLocation();
-            if (!IslandManager.isIslandWorld(location)) return;
+        final Entity entity = event.getEntity();
+        final Location location = entity.getLocation();
+        if (!IslandManager.isIslandWorld(location)) return;
 
-            if (config.denyNaturalSpawnWhitelist != config.denyNaturalSpawn.contains(entity.getType())) {
-                event.setCancelled(true);
-            }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
+        if (config.denyNaturalSpawnWhitelist != config.denyNaturalSpawn.contains(entity.getType())) {
+            event.setCancelled(true);
         }
     }
 

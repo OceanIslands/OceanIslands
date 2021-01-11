@@ -37,16 +37,9 @@ public class RegenCommand extends Command {
                                 if (IridiumSkyblock.getConfiguration().restartUpgradesOnRegen) {
                                     user.getIsland().resetMissions();
                                     user.getIsland().setSizeLevel(1);
-                                    user.getIsland().memberLevel = 1;
-                                    user.getIsland().warpLevel = 1;
-                                    user.getIsland().oreLevel = 1;
-                                    user.getIsland().flightBooster = 0;
-                                    user.getIsland().expBooster = 0;
-                                    user.getIsland().farmingBooster = 0;
-                                    user.getIsland().spawnerBooster = 0;
-                                    user.getIsland().crystals = 0;
-                                    user.getIsland().exp = 0;
-                                    user.getIsland().money = 0;
+                                    user.getIsland().setMemberLevel(1);
+                                    user.getIsland().setWarpLevel(1);
+                                    user.getIsland().setOreLevel(1);
                                 }
                                 user.getIsland().teleportPlayersHome();
                             }, IridiumSkyblock.getMessages().resetAction).getInventory());
@@ -55,7 +48,7 @@ public class RegenCommand extends Command {
                         }
                     } else {
                         int day = (int) TimeUnit.SECONDS.toDays(time);
-                        int hours = (int) Math.floor(TimeUnit.SECONDS.toHours(time - day * 86400));
+                        int hours = (int) Math.floor(TimeUnit.SECONDS.toHours(time - day * 86400L));
                         int minute = (int) Math.floor((time - day * 86400 - hours * 3600) / 60.00);
                         int second = (int) Math.floor((time - day * 86400 - hours * 3600) % 60.00);
                         p.sendMessage(Utils.color(IridiumSkyblock.getMessages().regenCooldown.replace("%days%", day + "").replace("%hours%", hours + "").replace("%minutes%", minute + "").replace("%seconds%", second + "").replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
@@ -87,16 +80,9 @@ public class RegenCommand extends Command {
                     if (IridiumSkyblock.getConfiguration().restartUpgradesOnRegen) {
                         island.resetMissions();
                         island.setSizeLevel(1);
-                        island.memberLevel = 1;
-                        island.warpLevel = 1;
-                        island.oreLevel = 1;
-                        island.flightBooster = 0;
-                        island.expBooster = 0;
-                        island.farmingBooster = 0;
-                        island.spawnerBooster = 0;
-                        island.crystals = 0;
-                        island.exp = 0;
-                        island.money = 0;
+                        island.setMemberLevel(1);
+                        island.setWarpLevel(1);
+                        island.setOreLevel(1);
                     }
                     island.teleportPlayersHome();
                 }, IridiumSkyblock.getMessages().resetAction).getInventory());

@@ -5,6 +5,7 @@ import com.cryptomorin.xseries.XMaterial;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.iridium.iridiumskyblock.IridiumSkyblock;
+import com.iridium.iridiumskyblock.configs.Upgrades;
 import com.iridium.iridiumskyblock.serializer.typeadapter.*;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -42,6 +43,12 @@ public class Persist {
                 .registerTypeAdapter(Location.class, new LocationTypeAdapter())
                 .registerTypeAdapter(Inventory.class, new InventoryTypeAdapter())
                 .registerTypeAdapterFactory(EnumTypeAdapter.ENUM_FACTORY)
+                .registerTypeAdapterFactory(
+                        RuntimeTypeAdapterFactory.of(Upgrades.IslandUpgrade.class)
+                                .registerSubtype(Upgrades.IslandUpgrade.class)
+                                .registerSubtype(Upgrades.IslandBlockLimitUpgrade.class)
+                                .registerSubtype(Upgrades.IslandOreUpgrade.class)
+                )
                 .registerTypeAdapter(XMaterial.class, new XMaterialsTypeAdapter())
                 .registerTypeAdapter(Date.class, new DateTypeAdapter())
                 .registerTypeAdapter(XBiome.class, new XBiomeTypeAdapter());
@@ -74,7 +81,7 @@ public class Persist {
             try {
                 file.createNewFile();
             } catch (IOException e) {
-                IridiumSkyblock.getInstance().sendErrorMessage(e);
+                e.printStackTrace();
             }
         }
         DiscUtil.writeCatch(file, gson.toJson(instance));

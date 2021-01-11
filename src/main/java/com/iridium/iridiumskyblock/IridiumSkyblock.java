@@ -1,14 +1,18 @@
 package com.iridium.iridiumskyblock;
 
-import com.cryptomorin.xseries.XBiome;
 import com.cryptomorin.xseries.XMaterial;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.iridium.iridiumskyblock.api.IridiumSkyblockReloadEvent;
+import com.iridium.iridiumskyblock.bank.BankItem;
 import com.iridium.iridiumskyblock.commands.CommandManager;
 import com.iridium.iridiumskyblock.configs.*;
 import com.iridium.iridiumskyblock.gui.*;
 import com.iridium.iridiumskyblock.listeners.*;
-import com.iridium.iridiumskyblock.managers.*;
+import com.iridium.iridiumskyblock.managers.IslandDataManager;
+import com.iridium.iridiumskyblock.managers.IslandManager;
+import com.iridium.iridiumskyblock.managers.SQLManager;
+import com.iridium.iridiumskyblock.managers.UserManager;
 import com.iridium.iridiumskyblock.nms.NMS;
 import com.iridium.iridiumskyblock.placeholders.ClipPlaceholderAPIManager;
 import com.iridium.iridiumskyblock.placeholders.MVDWPlaceholderAPIManager;
@@ -46,49 +50,51 @@ import java.util.stream.Collectors;
 
 public class IridiumSkyblock extends JavaPlugin {
 
-    private static SQL sql;
-    private static Config configuration;
-    private static Messages messages;
-    private static Missions missions;
-    private static Upgrades upgrades;
-    private static Boosters boosters;
-    private static Inventories inventories;
-    private static Schematics schematics;
-    private static Commands commands;
-    private static BlockValues blockValues;
-    private static Stackable stackable;
-    private static Shop shop;
-    private static TopGUI topGUI;
-    private static ShopGUI shopGUI;
-    private static Border border;
-    public static Map<Integer, VisitGUI> visitGUI;
-    public static Map<Integer, List<String>> oreUpgradeCache = new HashMap<>();
-    public static Map<Integer, List<String>> netherOreUpgradeCache = new HashMap<>();
+    private static IridiumSkyblock instance;
+
+    private SQL sql;
+    private Config configuration;
+    private Messages messages;
+    private Missions missions;
+    private Upgrades upgrades;
+    private Boosters boosters;
+    private Inventories inventories;
+    private Schematics schematics;
+    private Commands commands;
+    private BlockValues blockValues;
+    private Stackable stackable;
+    private Shop shop;
+    private TopGUI topGUI;
+    private ShopMenuGUI shopMenuGUI;
+    private Border border;
+    private Bank bank;
     private SkyblockGenerator generator;
-    private static WorldEdit worldEdit;
-    private static Schematic schematic;
-    private static Persist persist;
-
+    private WorldEdit worldEdit;
+    private Schematic schematic;
+    private Persist persist;
     private SpawnerSupport spawnerSupport;
-
     private Economy economy;
-
-    private static SQLManager sqlManager;
-    private static CommandManager commandManager;
-    private final List<String> languages = new ArrayList<>();
-    private LanguagesGUI languagesGUI;
+    private SQLManager sqlManager;
+    private CommandManager commandManager;
+    private MultiplePagesGUI<LanguagesGUI> languagesGUI;
     private String latest;
+    private NMS nms;
+    private File schematicFolder;
 
     public Map<UUID, Island> entities = new HashMap<>();
+    private MultiplePagesGUI<VisitGUI> visitGUI;
 
-    private static NMS nms;
-
+    private final Map<Integer, List<XMaterial>> oreUpgradeCache = new HashMap<>();
+    private final Map<Integer, List<XMaterial>> netherOreUpgradeCache = new HashMap<>();
     private final HashMap<String, BlockData> legacy = new HashMap<>();
 
-    private static File schematicFolder;
+    private final List<Upgrades.Upgrade> islandUpgrades = new ArrayList<>();
+    private final List<Boosters.Booster> islandBoosters = new ArrayList<>();
+    private final List<BankItem> bankItems = new ArrayList<>();
 
     @Override
     public void onEnable() {
+        instance = this;
         try {
             nms = (NMS) Class.forName("com.iridium.iridiumskyblock.nms." + Bukkit.getServer().getClass().getPackage().getName().split("\\.")[3]).newInstance();
         } catch (ClassNotFoundException e) {
@@ -110,109 +116,132 @@ public class IridiumSkyblock extends JavaPlugin {
             Bukkit.getPluginManager().disablePlugin(this);
             return;
         }
-        try {
-            generator = new SkyblockGenerator();
+        generator = new SkyblockGenerator();
 
-            super.onEnable();
-            Bukkit.getUpdateFolderFile().mkdir();
-            getDataFolder().mkdir();
+        super.onEnable();
+        Bukkit.getUpdateFolderFile().mkdir();
+        getDataFolder().mkdir();
 
-            persist = new Persist();
+        persist = new Persist();
 
-            new Metrics(this, 5825);
+        new Metrics(this, 5825);
 
-            if (!loadConfigs()) return;
-            saveConfigs();
+        loadConfigs();
+        saveConfigs();
 
-            startCounting();
-            setLanguages();
-            moveToSQL();
-            Bukkit.getScheduler().runTask(this, () -> { // Call this a tick later to ensure all worlds are loaded
-                IslandManager.makeWorlds();
-                IslandManager.nextLocation = new Location(IslandManager.getWorld(), 0, 0, 0);
-                loadManagers();
+        startCounting();
+        setLanguages();
+        Bukkit.getScheduler().runTask(this, () -> { // Call this a tick later to ensure all worlds are loaded
+            IslandManager.makeWorlds();
+            IslandManager.nextLocation = new Location(IslandManager.getWorld(), 0, 0, 0);
+            loadManagers();
 
-                if (Bukkit.getPluginManager().getPlugin("Multiverse-Core") != null) registerMultiverse();
+            if (Bukkit.getPluginManager().getPlugin("Multiverse-Core") != null) registerMultiverse();
 
-                // Call it as a delayed task to wait for the server to properly load first
-                Bukkit.getScheduler().scheduleSyncDelayedTask(IridiumSkyblock.getInstance(), IridiumSkyblock.getInstance()::islandValueManager);
+            // Call it as a delayed task to wait for the server to properly load first
+            Bukkit.getScheduler().scheduleSyncDelayedTask(IridiumSkyblock.getInstance(), IridiumSkyblock.getInstance()::islandValueManager);
 
-                topGUI = new TopGUI();
-                shopGUI = new ShopGUI();
-                visitGUI = new HashMap<>();
+            topGUI = new TopGUI();
+            shopMenuGUI = new ShopMenuGUI();
+            visitGUI = new MultiplePagesGUI<>(() -> {
+                int size = (int) (Math.floor(Utils.getIslands().size() / 45.00) + 1);
+                for (int i = 1; i <= size; i++) {
+                    VisitGUI visitGUI = getVisitGUI().getPage(i);
+                    if (visitGUI == null) {
+                        getVisitGUI().addPage(i, new VisitGUI(i));
+                    }
+                }
+            }, true);
 
-                registerListeners(new StructureGrowListener(), new EntitySpawnListener(), new BlockPistonListener(), new EntityPickupItemListener(), new PlayerTalkListener(), new ItemCraftListener(), new PlayerTeleportListener(), new PlayerPortalListener(), new BlockBreakListener(), new BlockPlaceListener(), new PlayerInteractListener(), new BlockFromToListener(), new SpawnerSpawnListener(), new EntityDeathListener(), new PlayerJoinLeaveListener(), new BlockGrowListener(), new PlayerTalkListener(), new PlayerMoveListener(), new EntityDamageByEntityListener(), new PlayerExpChangeListener(), new PlayerFishListener(), new EntityExplodeListener(), new PlayerBucketEmptyListener(), new EntityTargetLivingEntityListener(), new CreatureSpawnListener());
+            registerListeners(new PlayerRespawnListener(), new StructureGrowListener(), new EntitySpawnListener(), new BlockPistonListener(), new EntityPickupItemListener(), new PlayerTalkListener(), new ItemCraftListener(), new PlayerTeleportListener(), new PlayerPortalListener(), new BlockBreakListener(), new BlockPlaceListener(), new PlayerInteractListener(), new BlockFromToListener(), new SpawnerSpawnListener(), new EntityDeathListener(), new PlayerJoinLeaveListener(), new BlockGrowListener(), new PlayerTalkListener(), new PlayerMoveListener(), new EntityDamageByEntityListener(), new PlayerExpChangeListener(), new PlayerFishListener(), new EntityExplodeListener(), new PlayerBucketEmptyListener(), new EntityTargetLivingEntityListener(), new CreatureSpawnListener());
 
-                Bukkit.getScheduler().scheduleAsyncRepeatingTask(IridiumSkyblock.getInstance(), this::addPages, 0, 20 * 60);
-                Bukkit.getScheduler().scheduleAsyncRepeatingTask(IridiumSkyblock.getInstance(), () -> saveData(false), 0, 20 * 60);
+            Bukkit.getScheduler().scheduleAsyncRepeatingTask(IridiumSkyblock.getInstance(), this::saveData, 0, 20 * 30);
 
-                setupPlaceholderAPI();
+            setupPlaceholderAPI();
 
-                schematic = new Schematic();
+            schematic = new Schematic();
 
-                Plugin worldEdit = Bukkit.getPluginManager().getPlugin("WorldEdit");
-                Plugin asyncWorldEdit = Bukkit.getPluginManager().getPlugin("AsyncWorldEdit");
+            Plugin worldEdit = Bukkit.getPluginManager().getPlugin("WorldEdit");
+            Plugin asyncWorldEdit = Bukkit.getPluginManager().getPlugin("AsyncWorldEdit");
                 /*
                 If AsyncWorldEdit is loaded, then the schematic wont get pasted instantly.
                 This will cause the plugin to try to teleport to the island, however as the schematic hasn't been pasted yet
                 it will keep retrying to paste the schematic and get caught into a constant loop of pasting the island until the server crashes
                  */
-                if (worldEdit != null && asyncWorldEdit == null) {
-                    String worldEditVersion = worldEdit.getDescription().getVersion();
-                    // See https://regex101.com/r/j4CEMo/1.
-                    // This regex may be updated to support future releases of WorldEdit (version 10+).
-                    if (XMaterial.supports(13) && !worldEditVersion.matches("(7\\.[2-9]+.*|[^0-7]\\.[2-9]+.*)")) {
-                        getLogger().warning("Your current WorldEdit version has problems with the island schematics!");
-                        getLogger().warning("Please update to the newest version immediately!");
-                        getLogger().warning("A fallback system is now used");
-                        IridiumSkyblock.worldEdit = schematic;
-                    } else if (worldEditVersion.startsWith("6")) {
-                        IridiumSkyblock.worldEdit = new WorldEdit6();
-                    } else if (worldEditVersion.startsWith("7")) {
-                        IridiumSkyblock.worldEdit = new WorldEdit7();
-                    } else {
-                        IridiumSkyblock.worldEdit = schematic;
-                    }
+            if (worldEdit != null && asyncWorldEdit == null) {
+                String worldEditVersion = worldEdit.getDescription().getVersion();
+                // See https://regex101.com/r/j4CEMo/1.
+                // This regex may be updated to support future releases of WorldEdit (version 10+).
+                if (XMaterial.supports(13) && !worldEditVersion.matches("(7\\.[2-9]+.*|[^0-7]\\.[2-9]+.*)")) {
+                    getLogger().warning("Your current WorldEdit version has problems with the island schematics!");
+                    getLogger().warning("Please update to the newest version immediately!");
+                    getLogger().warning("A fallback system is now used");
+                    IridiumSkyblock.getInstance().worldEdit = schematic;
+                } else if (worldEditVersion.startsWith("6")) {
+                    IridiumSkyblock.getInstance().worldEdit = new WorldEdit6();
+                } else if (worldEditVersion.startsWith("7")) {
+                    IridiumSkyblock.getInstance().worldEdit = new WorldEdit7();
                 } else {
-                    IridiumSkyblock.worldEdit = schematic;
+                    IridiumSkyblock.getInstance().worldEdit = schematic;
                 }
+            } else {
+                IridiumSkyblock.getInstance().worldEdit = schematic;
+            }
 
-                try {
-                    loadSchematics();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+            try {
+                loadSchematics();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
 
-                if (Bukkit.getPluginManager().isPluginEnabled("WildStacker")) spawnerSupport = new Wildstacker();
-                if (Bukkit.getPluginManager().isPluginEnabled("MergedSpawner")) spawnerSupport = new MergedSpawners();
-                if (Bukkit.getPluginManager().isPluginEnabled("UltimateStacker"))
-                    spawnerSupport = new UltimateStacker();
-                if (Bukkit.getPluginManager().isPluginEnabled("EpicSpawners")) spawnerSupport = new EpicSpawners();
-                if (Bukkit.getPluginManager().isPluginEnabled("AdvancedSpawners"))
-                    spawnerSupport = new AdvancedSpawners();
-                if (Bukkit.getPluginManager().isPluginEnabled("RoseStacker")) spawnerSupport = new RoseStacker();
-                if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null)
-                    registerListeners(new ExpansionUnregisterListener());
+            if (Bukkit.getPluginManager().isPluginEnabled("WildStacker")) spawnerSupport = new Wildstacker();
+            if (Bukkit.getPluginManager().isPluginEnabled("MergedSpawner")) spawnerSupport = new MergedSpawners();
+            if (Bukkit.getPluginManager().isPluginEnabled("UltimateStacker"))
+                spawnerSupport = new UltimateStacker();
+            if (Bukkit.getPluginManager().isPluginEnabled("EpicSpawners")) spawnerSupport = new EpicSpawners();
+            if (Bukkit.getPluginManager().isPluginEnabled("AdvancedSpawners"))
+                spawnerSupport = new AdvancedSpawners();
+            if (Bukkit.getPluginManager().isPluginEnabled("RoseStacker")) spawnerSupport = new RoseStacker();
+            if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null)
+                registerListeners(new ExpansionUnregisterListener());
 
-                //Register Vault
-                RegisteredServiceProvider<Economy> rsp = Bukkit.getServicesManager().getRegistration(Economy.class);
-                if (rsp != null) {
-                    economy = rsp.getProvider();
-                }
+            //Register Vault
+            RegisteredServiceProvider<Economy> rsp = Bukkit.getServicesManager().getRegistration(Economy.class);
+            if (rsp != null) {
+                economy = rsp.getProvider();
+            }
 
-                getLogger().info("----------------------------------------");
-                getLogger().info("");
-                getLogger().info(getDescription().getName() + " Enabled!");
-                getLogger().info("Version: " + getDescription().getVersion());
-                getLogger().info("Patreon: www.patreon.com/Peaches_MLG");
-                getLogger().info("");
-                getLogger().info("----------------------------------------");
+            getLogger().info("----------------------------------------");
+            getLogger().info("");
+            getLogger().info(getDescription().getName() + " Enabled!");
+            getLogger().info("Version: " + getDescription().getVersion());
+            getLogger().info("Patreon: www.patreon.com/Peaches_MLG");
+            getLogger().info("");
+            getLogger().info("----------------------------------------");
 
-                update();
-            });
-        } catch (Exception e) {
-            sendErrorMessage(e);
+            update();
+        });
+    }
+
+    @Override
+    public void onDisable() {
+        super.onDisable();
+
+        saveData();
+
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.closeInventory();
+            User user = User.getUser(p);
+            for (Object object : user.getHolograms()) {
+                IridiumSkyblock.getNms().removeHologram(p, object);
+            }
         }
+
+        getLogger().info("-------------------------------");
+        getLogger().info("");
+        getLogger().info(getDescription().getName() + " Disabled!");
+        getLogger().info("");
+        getLogger().info("-------------------------------");
     }
 
     private void update() {
@@ -263,7 +292,7 @@ public class IridiumSkyblock extends JavaPlugin {
 
     public void setLanguages() {
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
-            languages.clear();
+            List<String> languages = new ArrayList<>();
             try {
                 URLConnection connection = new URL("https://raw.githubusercontent.com/IridiumLLC/IridiumSkyblockLanguages/main/Languages").openConnection();
                 connection.setConnectTimeout(5000);
@@ -279,7 +308,13 @@ public class IridiumSkyblock extends JavaPlugin {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            languagesGUI = new LanguagesGUI();
+            java.util.Collections.sort(languages);
+            languagesGUI = new MultiplePagesGUI<>(() -> {
+                int size = (int) (Math.floor(languages.size() / 45.00) + 1);
+                for (int i = 1; i <= size; i++) {
+                    languagesGUI.addPage(i, new LanguagesGUI(i, languages));
+                }
+            }, false);
         });
     }
 
@@ -343,44 +378,10 @@ public class IridiumSkyblock extends JavaPlugin {
     }
 
     @Override
-    public void onDisable() {
-        try {
-            super.onDisable();
-
-            saveData(false);
-
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                p.closeInventory();
-                User user = User.getUser(p);
-                for (Object object : user.getHolograms()) {
-                    IridiumSkyblock.getNms().removeHologram(p, object);
-                }
-            }
-
-            getLogger().info("-------------------------------");
-            getLogger().info("");
-            getLogger().info(getDescription().getName() + " Disabled!");
-            getLogger().info("");
-            getLogger().info("-------------------------------");
-        } catch (Exception e) {
-            sendErrorMessage(e);
-        }
-    }
-
-    @Override
     public ChunkGenerator getDefaultWorldGenerator(String worldName, String id) {
         if (worldName.equals(configuration.worldName) || worldName.equals(configuration.netherWorldName))
             return generator;
         return super.getDefaultWorldGenerator(worldName, id);
-    }
-
-    private void addPages() {
-        int size = (int) (Math.floor(Utils.getIslands().size() / 45.00) + 1);
-        for (int i = 1; i <= size; i++) {
-            if (!visitGUI.containsKey(i)) {
-                visitGUI.put(i, new VisitGUI(i));
-            }
-        }
     }
 
     public void startCounting() {
@@ -402,19 +403,19 @@ public class IridiumSkyblock extends JavaPlugin {
                     user.tookInterestMessage = false;
                 }
                 for (Island island : IslandManager.getLoadedIslands()) {
-                    double cm = island.money;
-                    int cc = island.crystals;
-                    int ce = island.exp;
-                    island.money = Math.floor(island.money * (1 + (configuration.dailyMoneyInterest / 100.00)));
-                    island.crystals = (int) Math.floor(island.crystals * (1 + (configuration.dailyCrystalsInterest / 100.00)));
-                    island.exp = (int) Math.floor(island.exp * (1 + (configuration.dailyExpInterest / 100.00)));
-                    island.interestCrystal = island.crystals - cc;
-                    island.interestMoney = island.money - cm;
-                    island.interestExp = island.exp - ce;
+                    double cm = island.getMoney();
+                    int cc = island.getCrystals();
+                    int ce = island.getExperience();
+                    island.setMoney(Math.floor(cm * (1 + (configuration.dailyMoneyInterest / 100.00))));
+                    island.setCrystals((int) Math.floor(cc * (1 + (configuration.dailyCrystalsInterest / 100.00))));
+                    island.setExperience((int) Math.floor(ce * (1 + (configuration.dailyExpInterest / 100.00))));
+                    island.interestCrystal = island.getCrystals() - cc;
+                    island.interestMoney = island.getMoney() - cm;
+                    island.interestExp = island.getExperience() - ce;
                     for (String member : island.members) {
                         Player p = Bukkit.getPlayer(User.getUser(member).name);
                         if (p != null) {
-                            if (cm != island.money && cc != island.crystals && ce != island.exp)
+                            if (cm != island.getMoney() && cc != island.getCrystals() && ce != island.getExperience())
                                 p.sendMessage(Utils.color(IridiumSkyblock.getMessages().islandInterest
                                         .replace("%exp%", Utils.NumberFormatter.format(island.interestExp))
                                         .replace("%crystals%", Utils.NumberFormatter.format(island.interestCrystal))
@@ -448,10 +449,6 @@ public class IridiumSkyblock extends JavaPlugin {
                 }
             }
         }, 0, configuration.valueUpdateInterval);
-    }
-
-    public void sendErrorMessage(Exception e) {
-        e.printStackTrace();
     }
 
     public void registerListeners(Listener... listener) {
@@ -515,18 +512,10 @@ public class IridiumSkyblock extends JavaPlugin {
         }
     }
 
-    public void moveToSQL() {
-        sqlManager = new SQLManager();
-        sqlManager.createTables();
-        if (persist.getFile("islandmanager").exists()) {
-            LegacyIslandManager legacyIslandManager = persist.load(LegacyIslandManager.class, persist.getFile("islandmanager"));
-            legacyIslandManager.moveToSQL();
-            persist.getFile("islandmanager").renameTo(persist.getFile("islandmanager_old"));
-        }
-    }
-
     public void loadManagers() {
         try {
+            sqlManager = new SQLManager();
+            sqlManager.createTables();
             Connection connection = sqlManager.getConnection();
             PreparedStatement statement = connection.prepareStatement("SELECT * FROM islandmanager;");
 
@@ -553,6 +542,7 @@ public class IridiumSkyblock extends JavaPlugin {
                 insert.executeUpdate();
                 insert.close();
             }
+            IslandDataManager.update(connection);
             statement.close();
             connection.commit();
             connection.close();
@@ -563,7 +553,7 @@ public class IridiumSkyblock extends JavaPlugin {
         if (configuration.netherIslands) IslandManager.getNetherWorld().getWorldBorder().setSize(Double.MAX_VALUE);
     }
 
-    public boolean loadConfigs() {
+    public void loadConfigs() {
         configuration = persist.getFile(Config.class).exists() ? persist.load(Config.class) : new Config();
         sql = persist.getFile(SQL.class).exists() ? persist.load(SQL.class) : new SQL();
         missions = persist.getFile(Missions.class).exists() ? persist.load(Missions.class) : new Missions();
@@ -577,31 +567,25 @@ public class IridiumSkyblock extends JavaPlugin {
         shop = persist.getFile(Shop.class).exists() ? persist.load(Shop.class) : new Shop();
         border = persist.getFile(Border.class).exists() ? persist.load(Border.class) : new Border();
         stackable = persist.getFile(Stackable.class).exists() ? persist.load(Stackable.class) : new Stackable();
-        if (stackable.blockList.isEmpty()) {
-            stackable.blockList = Arrays.asList(XMaterial.NETHERITE_BLOCK, XMaterial.DIAMOND_BLOCK, XMaterial.EMERALD_BLOCK, XMaterial.GOLD_BLOCK, XMaterial.IRON_BLOCK);
-        }
+        bank = persist.getFile(Bank.class).exists() ? persist.load(Bank.class) : new Bank();
 
-        if (schematics.schematics != null) {
-            schematics.schematicList = schematics.schematics.stream().map(Schematics.LegacyFakeSchematic::tonew).collect(Collectors.toList());
-            schematics.schematics = null;
-        }
+        registerUpgrade(getUpgrades().islandSizeUpgrade);
+        registerUpgrade(getUpgrades().islandMemberUpgrade);
+        registerUpgrade(getUpgrades().islandOresUpgrade);
+        registerUpgrade(getUpgrades().islandWarpUpgrade);
+        registerUpgrade(getUpgrades().islandBlockLimitUpgrade);
 
-        if (inventories.red.slot == null) inventories.red.slot = 10;
-        if (inventories.green.slot == null) inventories.green.slot = 12;
-        if (inventories.blue.slot == null) inventories.blue.slot = 14;
-        if (inventories.off.slot == null) inventories.off.slot = 16;
+        registerBooster(getBoosters().islandFlightBooster);
+        registerBooster(getBoosters().islandSpawnerBooster);
+        registerBooster(getBoosters().islandFarmingBooster);
+        registerBooster(getBoosters().islandExperienceBooster);
 
-        missions.missions.remove(null);
-
+        registerBankItem(bank.crystalsBankItem);
+        registerBankItem(bank.experienceBankItem);
+        registerBankItem(bank.vaultBankItem);
 
         commandManager = new CommandManager("island");
         commandManager.registerCommands();
-
-        if (configuration == null || missions == null || messages == null || upgrades == null || boosters == null || inventories == null || schematics == null || commands == null || blockValues == null || shop == null || stackable == null) {
-            return false;
-        }
-
-        if (shop.shop == null) shop = new Shop();
 
         if (commandManager != null) {
             if (commandManager.commands.contains(IridiumSkyblock.getCommands().shopCommand)) {
@@ -615,90 +599,47 @@ public class IridiumSkyblock extends JavaPlugin {
 
         blockValues.blockvalue.remove(XMaterial.AIR);
 
-        if (configuration.biomes != null) {
-            configuration.islandBiomes.clear();
-            for (XBiome biome : configuration.biomes) {
-                configuration.islandBiomes.put(biome, new Config.BiomeConfig());
-            }
-            configuration.biomes = null;
-        }
-
         oreUpgradeCache.clear();
-        for (int i : upgrades.oresUpgrade.upgrades.keySet()) {
-            ArrayList<String> items = new ArrayList<>();
-            for (String item : upgrades.oresUpgrade.upgrades.get(i).ores) {
+        for (int i : upgrades.islandOresUpgrade.upgrades.keySet()) {
+            ArrayList<XMaterial> items = new ArrayList<>();
+            for (String item : ((Upgrades.IslandOreUpgrade) upgrades.islandOresUpgrade.getIslandUpgrade(i)).ores) {
                 if (item != null) {
-                    int i1 = Integer.parseInt(item.split(":")[1]);
-                    for (int a = 0; a <= i1; a++) {
-                        items.add(item.split(":")[0]);
+                    String[] itemData = item.split(":");
+                    int amount = Integer.parseInt(itemData[1]);
+                    for (int a = 0; a <= amount; a++) {
+                        items.add(XMaterial.valueOf(itemData[0]));
                     }
                 } else {
-                    upgrades.oresUpgrade.upgrades.get(i).ores.remove(null);
+                    ((Upgrades.IslandOreUpgrade) upgrades.islandOresUpgrade.getIslandUpgrade(i)).ores.remove(null);
                 }
             }
             oreUpgradeCache.put(i, items);
         }
 
         netherOreUpgradeCache.clear();
-        for (int i : upgrades.oresUpgrade.upgrades.keySet()) {
-            ArrayList<String> items = new ArrayList<>();
-            for (String item : upgrades.oresUpgrade.upgrades.get(i).netherores) {
+        for (int i : upgrades.islandOresUpgrade.upgrades.keySet()) {
+            ArrayList<XMaterial> items = new ArrayList<>();
+            for (String item : ((Upgrades.IslandOreUpgrade) upgrades.islandOresUpgrade.getIslandUpgrade(i)).netherores) {
                 if (item != null) {
-                    int i1 = Integer.parseInt(item.split(":")[1]);
-                    for (int a = 0; a <= i1; a++) {
-                        items.add(item.split(":")[0]);
+                    String[] itemData = item.split(":");
+                    int amount = Integer.parseInt(itemData[1]);
+                    for (int a = 0; a <= amount; a++) {
+                        items.add(XMaterial.valueOf(itemData[0]));
                     }
                 } else {
-                    upgrades.oresUpgrade.upgrades.get(i).netherores.remove(null);
+                    ((Upgrades.IslandOreUpgrade) upgrades.islandOresUpgrade.getIslandUpgrade(i)).netherores.remove(null);
                 }
             }
             netherOreUpgradeCache.put(i, items);
         }
 
-        if (boosters.flightBooster.time == 0) boosters.flightBooster.time = 3600;
-        if (boosters.experianceBooster.time == 0) boosters.experianceBooster.time = 3600;
-        if (boosters.farmingBooster.time == 0) boosters.farmingBooster.time = 3600;
-        if (boosters.spawnerBooster.time == 0) boosters.spawnerBooster.time = 3600;
-
-        if (boosters.spawnerBooster.crystalsCost == 0 && boosters.spawnerBooster.vaultCost == 0)
-            boosters.spawnerBooster.crystalsCost = 15;
-        if (boosters.farmingBooster.crystalsCost == 0 && boosters.farmingBooster.vaultCost == 0)
-            boosters.farmingBooster.crystalsCost = 15;
-        if (boosters.experianceBooster.crystalsCost == 0 && boosters.experianceBooster.vaultCost == 0)
-            boosters.experianceBooster.crystalsCost = 15;
-        if (boosters.flightBooster.crystalsCost == 0 && boosters.flightBooster.vaultCost == 0)
-            boosters.flightBooster.crystalsCost = 15;
-
-        if (configuration.blockvalue != null) {
-            blockValues.blockvalue = new HashMap<>(configuration.blockvalue);
-            configuration.blockvalue = null;
-        }
-        if (configuration.spawnervalue != null) {
-            blockValues.spawnervalue = new HashMap<>(configuration.spawnervalue);
-            configuration.spawnervalue = null;
-        }
-        int max = 0;
-        for (Upgrades.IslandUpgrade size : upgrades.sizeUpgrade.upgrades.values()) {
-            if (max < size.size) {
-                max = size.size;
-            }
-        }
+        int max = upgrades.islandSizeUpgrade.upgrades.values().stream().map(islandUpgrade -> islandUpgrade.size).sorted((a, b) -> b - a).collect(Collectors.toList()).get(0);
         if (configuration.distance <= max) {
             configuration.distance = max + 1;
         }
-        for (Island island : IslandManager.getLoadedIslands()) {
-            if (island.islandMenuGUI != null) island.islandMenuGUI.getInventory().clear();
-            if (island.schematicSelectGUI != null) island.schematicSelectGUI.getInventory().clear();
-            if (island.bankGUI != null) island.bankGUI.getInventory().clear();
-            if (island.boosterGUI != null) island.boosterGUI.getInventory().clear();
-            if (island.coopGUI != null) island.coopGUI.getInventory().clear();
-            if (island.membersGUI != null) island.membersGUI.getInventory().clear();
-            if (island.missionsGUI != null) island.missionsGUI.getInventory().clear();
-            if (island.permissionsGUI != null) island.permissionsGUI.getInventory().clear();
-            if (island.upgradeGUI != null) island.upgradeGUI.getInventory().clear();
-            if (island.warpGUI != null) island.warpGUI.getInventory().clear();
-            if (island.borderColorGUI != null) island.borderColorGUI.getInventory().clear();
-            if (configuration.missionRestart == MissionRestart.Instantly) {
+
+        if (configuration.missionRestart == MissionRestart.Instantly) {
+            for (Island island : IslandManager.getLoadedIslands()) {
                 island.resetMissions();
             }
         }
@@ -711,7 +652,7 @@ public class IridiumSkyblock extends JavaPlugin {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return true;
+        Bukkit.getPluginManager().callEvent(new IridiumSkyblockReloadEvent());
     }
 
     public BlockData fromLegacy(Material material, byte data) {
@@ -720,11 +661,7 @@ public class IridiumSkyblock extends JavaPlugin {
         return legacy.get(material.name() + data);
     }
 
-    public void saveData(boolean async) {
-        if (async) {
-            Bukkit.getScheduler().runTaskAsynchronously(this, () -> saveData(false));
-            return;
-        }
+    public void saveData() {
         Connection connection = sqlManager.getConnection();
         for (User user : UserManager.cache.values()) {
             user.save(connection);
@@ -766,79 +703,116 @@ public class IridiumSkyblock extends JavaPlugin {
             if (shop != null) persist.save(shop);
             if (border != null) persist.save(border);
             if (stackable != null) persist.save(stackable);
+            if (bank != null) persist.save(bank);
         });
     }
 
+    public List<XMaterial> getOreCache(int i) {
+        return oreUpgradeCache.getOrDefault(i, Collections.singletonList(XMaterial.COBBLESTONE));
+    }
+
+    public List<XMaterial> getNetherOreCache(int i) {
+        return netherOreUpgradeCache.getOrDefault(i, Collections.singletonList(XMaterial.COBBLESTONE));
+    }
+
+    public MultiplePagesGUI<VisitGUI> getVisitGUI() {
+        return visitGUI;
+    }
+
+    public void registerBankItem(BankItem bankItem) {
+        bankItems.add(bankItem);
+    }
+
+    public List<BankItem> getBankItems() {
+        return bankItems;
+    }
+
+    public void registerBooster(Boosters.Booster booster) {
+        islandBoosters.add(booster);
+    }
+
+    public List<Boosters.Booster> getIslandBoosters() {
+        return islandBoosters;
+    }
+
+    public void registerUpgrade(Upgrades.Upgrade upgrade) {
+        islandUpgrades.add(upgrade);
+    }
+
+    public List<Upgrades.Upgrade> getIslandUpgrades() {
+        return islandUpgrades;
+    }
+
     public static Persist getPersist() {
-        return persist;
+        return getInstance().persist;
     }
 
     public static Schematic getSchematic() {
-        return schematic;
+        return getInstance().schematic;
     }
 
     public static WorldEdit getWorldEdit() {
-        return worldEdit;
+        return getInstance().worldEdit;
     }
 
     public static Border getBorder() {
-        return border;
+        return getInstance().border;
     }
 
-    public static ShopGUI getShopGUI() {
-        return shopGUI;
+    public static ShopMenuGUI getShopGUI() {
+        return getInstance().shopMenuGUI;
     }
 
     public static TopGUI getTopGUI() {
-        return topGUI;
+        return getInstance().topGUI;
     }
 
     public static Shop getShop() {
-        return shop;
+        return getInstance().shop;
     }
 
     public static Stackable getStackable() {
-        return stackable;
+        return getInstance().stackable;
     }
 
     public static BlockValues getBlockValues() {
-        return blockValues;
+        return getInstance().blockValues;
     }
 
     public static Commands getCommands() {
-        return commands;
+        return getInstance().commands;
     }
 
     public static Schematics getSchematics() {
-        return schematics;
+        return getInstance().schematics;
     }
 
     public static Inventories getInventories() {
-        return inventories;
+        return getInstance().inventories;
     }
 
     public static Boosters getBoosters() {
-        return boosters;
+        return getInstance().boosters;
     }
 
     public static Upgrades getUpgrades() {
-        return upgrades;
+        return getInstance().upgrades;
     }
 
     public static Missions getMissions() {
-        return missions;
+        return getInstance().missions;
     }
 
     public static Messages getMessages() {
-        return messages;
+        return getInstance().messages;
     }
 
     public static Config getConfiguration() {
-        return configuration;
+        return getInstance().configuration;
     }
 
     public static SQL getSql() {
-        return sql;
+        return getInstance().sql;
     }
 
     public SpawnerSupport getSpawnerSupport() {
@@ -849,11 +823,7 @@ public class IridiumSkyblock extends JavaPlugin {
         return economy;
     }
 
-    public List<String> getLanguages() {
-        return languages;
-    }
-
-    public LanguagesGUI getLanguagesGUI() {
+    public MultiplePagesGUI<LanguagesGUI> getLanguagesGUI() {
         return languagesGUI;
     }
 
@@ -862,22 +832,22 @@ public class IridiumSkyblock extends JavaPlugin {
     }
 
     public static NMS getNms() {
-        return nms;
+        return getInstance().nms;
     }
 
     public static File getSchematicFolder() {
-        return schematicFolder;
+        return getInstance().schematicFolder;
     }
 
     public static SQLManager getSqlManager() {
-        return sqlManager;
+        return getInstance().sqlManager;
     }
 
     public static CommandManager getCommandManager() {
-        return commandManager;
+        return getInstance().commandManager;
     }
 
     public static IridiumSkyblock getInstance() {
-        return (IridiumSkyblock) Bukkit.getPluginManager().getPlugin("OceanIslands");
+        return instance;
     }
 }

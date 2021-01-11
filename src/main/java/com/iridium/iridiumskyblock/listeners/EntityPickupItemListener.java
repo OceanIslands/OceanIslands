@@ -1,6 +1,5 @@
 package com.iridium.iridiumskyblock.listeners;
 
-import com.iridium.iridiumskyblock.IridiumSkyblock;
 import com.iridium.iridiumskyblock.Island;
 import com.iridium.iridiumskyblock.User;
 import com.iridium.iridiumskyblock.managers.IslandManager;
@@ -15,18 +14,14 @@ public class EntityPickupItemListener implements Listener {
 
     @EventHandler
     public void onEntityPickupItem(PlayerPickupItemEvent event) {
-        try {
-            final Item item = event.getItem();
-            final Location location = item.getLocation();
-            final Island island = IslandManager.getIslandViaLocation(location);
-            if (island == null) return;
+        final Item item = event.getItem();
+        final Location location = item.getLocation();
+        final Island island = IslandManager.getIslandViaLocation(location);
+        if (island == null) return;
 
-            final Player player = event.getPlayer();
-            final User user = User.getUser(player);
-            if (!island.getPermissions(user).pickupItems)
-                event.setCancelled(true);
-        } catch (Exception ex) {
-            IridiumSkyblock.getInstance().sendErrorMessage(ex);
-        }
+        final Player player = event.getPlayer();
+        final User user = User.getUser(player);
+        if (!island.getPermissions(user).pickupItems)
+            event.setCancelled(true);
     }
 }

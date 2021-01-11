@@ -7,8 +7,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class IslandKickEvent extends IslandEvent implements Cancellable {
-  @Nullable public final User userWhoKicked;
-  @NotNull public final User kickedUser;
+  @Nullable private final User userWhoKicked;
+  @NotNull private final User kickedUser;
   private boolean cancelled = false;
   
   public IslandKickEvent(@NotNull Island island, @Nullable User userWhoKicked, @NotNull User kickedUser) {
@@ -27,4 +27,11 @@ public class IslandKickEvent extends IslandEvent implements Cancellable {
         this.cancelled = b;
     }
 
+  public User getUserWhoKicked() {
+    return userWhoKicked;
+  }
+
+  public User getKickedUser() {
+    return kickedUser;
+  }
 }

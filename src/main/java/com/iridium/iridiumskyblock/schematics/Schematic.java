@@ -121,7 +121,6 @@ public class Schematic implements WorldEdit {
         } else {
             //LoadBlocks
             if (ISFLAT) {
-                try {
                     for (int x = 0; x < width; ++x) {
                         for (int y = 0; y < height; ++y) {
                             for (int z = 0; z < length; ++z) {
@@ -201,9 +200,6 @@ public class Schematic implements WorldEdit {
                             }
                         }
                     }
-                } catch (Exception e) {
-                    IridiumSkyblock.getInstance().sendErrorMessage(e);
-                }
             } else {
                 location.getBlock().setType(Material.STONE);
                 IridiumSkyblock.getInstance().getLogger().warning("Tried to load a 1.13+ schematic in a native minecraft version");

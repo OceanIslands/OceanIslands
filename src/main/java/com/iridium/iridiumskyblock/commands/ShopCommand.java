@@ -23,7 +23,7 @@ public class ShopCommand extends Command {
             String shopName = args[1];
             for (Shop.ShopObject shopObject : IridiumSkyblock.getShop().shop) {
                 if (shopObject.name.equalsIgnoreCase(shopName)) {
-                    p.openInventory(IridiumSkyblock.getShopGUI().shops.get(shopObject.slot).shops.get(1).getInventory());
+                    p.openInventory(IridiumSkyblock.getShopGUI().pages.getPage(shopObject.slot).getPage(1).getInventory());
                     return;
                 }
             }

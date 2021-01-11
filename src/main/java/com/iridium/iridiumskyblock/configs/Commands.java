@@ -54,4 +54,5 @@ public class Commands {
     public ExpelCommand expelCommand = new ExpelCommand();
     public PurgeCommand purgeCommand = new PurgeCommand();
     public ResetCrystalsCommand resetCrystalsCommand = new ResetCrystalsCommand();
+    public ResetAllDataCommand resetAllDataCommand = new ResetAllDataCommand();
 }

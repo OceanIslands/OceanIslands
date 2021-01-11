@@ -4,6 +4,7 @@ import com.iridium.iridiumskyblock.IridiumSkyblock;
 import com.iridium.iridiumskyblock.Island;
 import com.iridium.iridiumskyblock.User;
 import com.iridium.iridiumskyblock.Utils;
+import com.iridium.iridiumskyblock.gui.VisitGUI;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -22,7 +23,9 @@ public class VisitCommand extends Command {
     public void execute(CommandSender sender, String[] args) {
         Player p = (Player) sender;
         if (args.length != 2) {
-            p.openInventory(IridiumSkyblock.visitGUI.get(1).getInventory());
+            VisitGUI visitGUI = IridiumSkyblock.getInstance().getVisitGUI().getPage(1);
+            visitGUI.addContent();
+            p.openInventory(visitGUI.getInventory());
             return;
         }
         OfflinePlayer player = Bukkit.getOfflinePlayer(args[1]);

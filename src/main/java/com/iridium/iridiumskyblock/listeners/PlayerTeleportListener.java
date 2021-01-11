@@ -19,7 +19,6 @@ public class PlayerTeleportListener implements Listener {
 
     @EventHandler
     public void onPlayerTeleport(PlayerTeleportEvent event) {
-        try {
             final Location toLocation = event.getTo();
             final Location fromLocation = event.getFrom();
             if (!IslandManager.isIslandWorld(toLocation)) return;
@@ -57,8 +56,5 @@ public class PlayerTeleportListener implements Listener {
                 event.setCancelled(true);
                 player.sendMessage(Utils.color(IridiumSkyblock.getMessages().playersIslandIsPrivate.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 }

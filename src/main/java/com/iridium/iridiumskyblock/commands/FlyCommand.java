@@ -22,7 +22,21 @@ public class FlyCommand extends Command {
         User user = User.getUser(p);
         if (user.getIsland() != null) {
             if (user.getIsland().isInIsland(p.getLocation())) {
-                if (user.getIsland().flightBooster != 0 || p.hasPermission("iridiumskyblock.Fly")) {
+                if (user.getIsland().getBoosterTime(IridiumSkyblock.getBoosters().islandFlightBooster.name) != 0 || p.hasPermission("iridiumskyblock.Fly")) {
+                    if (args.length == 2) {
+                        switch (args[1].toLowerCase()) {
+                            case "on":
+                                p.setAllowFlight(true);
+                                p.setFlying(true);
+                                p.sendMessage(Utils.color(IridiumSkyblock.getMessages().flightEnabled.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                                return;
+                            case "off":
+                                p.setAllowFlight(false);
+                                p.setFlying(false);
+                                p.sendMessage(Utils.color(IridiumSkyblock.getMessages().flightDisabled.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+                                return;
+                        }
+                    }
                     if (p.getAllowFlight()) {
                         p.setAllowFlight(false);
                         p.setFlying(false);
@@ -51,6 +65,6 @@ public class FlyCommand extends Command {
 
     @Override
     public List<String> TabComplete(CommandSender cs, org.bukkit.command.Command cmd, String s, String[] args) {
-        return null;
+        return Arrays.asList("on", "off");
     }
 }

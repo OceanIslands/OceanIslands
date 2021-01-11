@@ -55,96 +55,88 @@ public class CommandManager implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender cs, org.bukkit.command.Command cmd, String s, String[] args) {
-        try {
-            if (!IridiumSkyblock.getConfiguration().mainCommandPerm.equalsIgnoreCase("") && !cs
-                    .hasPermission(IridiumSkyblock.getConfiguration().mainCommandPerm)) {
-                cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().noPermission
-                        .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                return false;
-            }
-            if (args.length != 0) {
-                for (Command command : commands) {
-                    if (command.aliases.contains(args[0]) && command.enabled) {
-                        if (command.player && !(cs instanceof Player)) {
-                            // Must be a player
-                            cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().mustBeAPlayer
-                                    .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                            return true;
-                        }
-                        if ((cs.hasPermission(command.permission) || command.permission
-                                .equalsIgnoreCase("") || command.permission
-                                .equalsIgnoreCase("iridiumskyblock.")) && command.enabled) {
-                            command.execute(cs, args);
-                        } else {
-                            // No permission
-                            cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().noPermission
-                                    .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                        }
+        if (!IridiumSkyblock.getConfiguration().mainCommandPerm.equalsIgnoreCase("") && !cs
+                .hasPermission(IridiumSkyblock.getConfiguration().mainCommandPerm)) {
+            cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().noPermission
+                    .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
+            return false;
+        }
+        if (args.length != 0) {
+            for (Command command : commands) {
+                if (command.aliases.contains(args[0]) && command.enabled) {
+                    if (command.player && !(cs instanceof Player)) {
+                        // Must be a player
+                        cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().mustBeAPlayer
+                                .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
                         return true;
                     }
-                }
-            } else {
-                if (cs instanceof Player) {
-                    Player p = (Player) cs;
-                    User u = User.getUser(p);
-                    if (u.getIsland() != null) {
-                        if (u.getIsland().schematic == null) {
-                            if (IridiumSkyblock.getSchematics().schematicList.size() == 1) {
-                                for (Schematics.FakeSchematic schematic : IridiumSkyblock.getSchematics().schematicList) {
-                                    u.getIsland().schematic = schematic.overworldData.schematic;
-                                    u.getIsland().netherschematic = schematic.netherData.schematic;
-                                    break;
-                                }
-                            } else {
-                                p.openInventory(u.getIsland().schematicSelectGUI.getInventory());
-                                return true;
-                            }
-                        }
-                        if (IridiumSkyblock.getConfiguration().islandMenu) {
-                            p.openInventory(u.getIsland().islandMenuGUI.getInventory());
-                        } else {
-                            u.getIsland().teleportHome(p);
-                        }
+                    if ((cs.hasPermission(command.permission) || command.permission
+                            .equalsIgnoreCase("") || command.permission
+                            .equalsIgnoreCase("iridiumskyblock.")) && command.enabled) {
+                        command.execute(cs, args);
                     } else {
-                        IslandManager.createIsland(p);
+                        // No permission
+                        cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().noPermission
+                                .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
                     }
                     return true;
                 }
             }
-            cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().unknownCommand
-                    .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
+        } else {
+            if (cs instanceof Player) {
+                Player p = (Player) cs;
+                User u = User.getUser(p);
+                if (u.getIsland() != null) {
+                    if (u.getIsland().schematic == null) {
+                        if (IridiumSkyblock.getSchematics().schematicList.size() == 1) {
+                            for (Schematics.FakeSchematic schematic : IridiumSkyblock.getSchematics().schematicList) {
+                                u.getIsland().schematic = schematic.overworldData.schematic;
+                                u.getIsland().netherschematic = schematic.netherData.schematic;
+                                break;
+                            }
+                        } else {
+                            p.openInventory(u.getIsland().schematicSelectGUI.getInventory());
+                            return true;
+                        }
+                    }
+                    if (IridiumSkyblock.getConfiguration().islandMenu) {
+                        p.openInventory(u.getIsland().islandMenuGUI.getInventory());
+                    } else {
+                        u.getIsland().teleportHome(p);
+                    }
+                } else {
+                    IslandManager.createIsland(p);
+                }
+                return true;
+            }
         }
+        cs.sendMessage(Utils.color(IridiumSkyblock.getMessages().unknownCommand
+                .replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
         return true;
     }
 
     @Override
     public List<String> onTabComplete(CommandSender cs, org.bukkit.command.Command cmd, String s, String[] args) {
-        try {
-            if (args.length == 1) {
-                ArrayList<String> result = new ArrayList<>();
-                for (Command command : commands) {
-                    for (String alias : command.aliases) {
-                        if (alias.toLowerCase().startsWith(args[0].toLowerCase()) && (
-                                command.enabled && (cs.hasPermission(command.permission)
-                                        || command.permission.equalsIgnoreCase("") || command.permission
-                                        .equalsIgnoreCase("iridiumskyblock.")))) {
-                            result.add(alias);
-                        }
+        if (args.length == 1) {
+            ArrayList<String> result = new ArrayList<>();
+            for (Command command : commands) {
+                for (String alias : command.aliases) {
+                    if (alias.toLowerCase().startsWith(args[0].toLowerCase()) && (
+                            command.enabled && (cs.hasPermission(command.permission)
+                                    || command.permission.equalsIgnoreCase("") || command.permission
+                                    .equalsIgnoreCase("iridiumskyblock.")))) {
+                        result.add(alias);
                     }
                 }
-                return result;
             }
-            for (Command command : commands) {
-                if (command.aliases.contains(args[0]) && (command.enabled && (
-                        cs.hasPermission(command.permission) || command.permission.equalsIgnoreCase("")
-                                || command.permission.equalsIgnoreCase("iridiumskyblock.")))) {
-                    return command.TabComplete(cs, cmd, s, args);
-                }
+            return result;
+        }
+        for (Command command : commands) {
+            if (command.aliases.contains(args[0]) && (command.enabled && (
+                    cs.hasPermission(command.permission) || command.permission.equalsIgnoreCase("")
+                            || command.permission.equalsIgnoreCase("iridiumskyblock.")))) {
+                return command.TabComplete(cs, cmd, s, args);
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
         }
         return null;
     }

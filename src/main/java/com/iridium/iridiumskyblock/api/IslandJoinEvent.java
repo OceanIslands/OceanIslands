@@ -7,12 +7,12 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class IslandJoinEvent extends IslandEvent implements Cancellable {
-    @Nullable public final User joinedUser;
+    @Nullable private final User user;
     private boolean cancelled = false;
 
-    public IslandJoinEvent(@NotNull Island island, @Nullable User joinedUser) {
+    public IslandJoinEvent(@NotNull Island island, @Nullable User user) {
         super(island);
-        this.joinedUser = joinedUser;
+        this.user = user;
     }
 
     @Override
@@ -25,4 +25,7 @@ public class IslandJoinEvent extends IslandEvent implements Cancellable {
         this.cancelled = b;
     }
 
+    public User getUser() {
+        return user;
+    }
 }

@@ -5,6 +5,7 @@ import com.iridium.iridiumskyblock.*;
 import com.iridium.iridiumskyblock.configs.Config;
 import com.iridium.iridiumskyblock.configs.Missions.Mission;
 import com.iridium.iridiumskyblock.configs.Missions.MissionData;
+import com.iridium.iridiumskyblock.configs.Upgrades;
 import com.iridium.iridiumskyblock.managers.IslandManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -27,7 +28,6 @@ public class BlockPlaceListener implements Listener {
 
     @EventHandler
     public void onBlockPlace(BlockPlaceEvent event) {
-        try {
             final Block block = event.getBlock();
             final Location location = block.getLocation();
             final Island island = IslandManager.getIslandViaLocation(location);
@@ -47,7 +47,7 @@ public class BlockPlaceListener implements Listener {
             final Material material = block.getType();
             final XMaterial xmaterial = XMaterial.matchXMaterial(material);
             final Config config = IridiumSkyblock.getConfiguration();
-            final Integer max = config.limitedBlocks.get(xmaterial);
+            final Integer max = ((Upgrades.IslandBlockLimitUpgrade)IridiumSkyblock.getUpgrades().islandBlockLimitUpgrade.upgrades.get(island.getBlockLimitLevel())).limitedBlocks.get(xmaterial);
             if (max != null) {
                 if (island.valuableBlocks.getOrDefault(xmaterial.name(), 0) >= max) {
                     player.sendMessage(Utils.color(IridiumSkyblock.getMessages().blockLimitReached
@@ -82,14 +82,10 @@ public class BlockPlaceListener implements Listener {
             if (!island.getPermissions(user).placeBlocks) {
                 event.setCancelled(true);
             }
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onMonitorBlockPlace(BlockPlaceEvent event) {
-        try {
             final Block block = event.getBlock();
             final Location location = block.getLocation();
             final Island island = IslandManager.getIslandViaLocation(location);
@@ -105,9 +101,6 @@ public class BlockPlaceListener implements Listener {
             });
 
             Bukkit.getScheduler().runTask(IridiumSkyblock.getInstance(), island::calculateIslandValue);
-        } catch (Exception e) {
-            IridiumSkyblock.getInstance().sendErrorMessage(e);
-        }
     }
 
     @EventHandler

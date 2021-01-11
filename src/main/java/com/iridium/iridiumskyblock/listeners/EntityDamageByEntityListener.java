@@ -40,126 +40,118 @@ public class EntityDamageByEntityListener implements Listener {
 
     @EventHandler
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        try {
-            final Entity damagee = event.getEntity();
-            final Location damageeLocation = damagee.getLocation();
-            final Island island = IslandManager.getIslandViaLocation(damageeLocation);
-            if (island == null) return;
+        final Entity damagee = event.getEntity();
+        final Location damageeLocation = damagee.getLocation();
+        final Island island = IslandManager.getIslandViaLocation(damageeLocation);
+        if (island == null) return;
 
-            final Entity damager = event.getDamager();
+        final Entity damager = event.getDamager();
 
-            if (damager instanceof Projectile && damagee instanceof Hanging) {
-                Player player = (Player) ((Egg) damager).getShooter();
-                User user = User.getUser(player);
-                if (player != null && !island.members.contains(player.getUniqueId().toString()) && !island.isCoop(user.getIsland())) {
-                    event.setCancelled(true);
-                }
-            }
-            // Using suppliers to defer work if unnecessary
-            // This includes seemingly innocuous downcast operations
-            final Supplier<Player> damageePlayerSupplier = () -> (Player) damagee;
-            final Supplier<User> damageeUserSupplier = () -> User.getUser(damageePlayerSupplier.get());
-            final Supplier<Island> damageeIslandSupplier = () -> damageeUserSupplier.get().getIsland();
-            final Supplier<Arrow> arrowSupplier = () -> (Arrow) damager;
-            final Supplier<ProjectileSource> projectileSourceSupplier = () -> arrowSupplier.get().getShooter();
-            final Supplier<Player> shooterSupplier = () -> (Player) projectileSourceSupplier.get();
-            final Supplier<User> shootingUserSupplier = () -> User.getUser(Objects.requireNonNull(shooterSupplier.get()));
-            final Supplier<Player> damagingPlayerSupplier = () -> (Player) damager;
-            final Supplier<User> damagingUserSupplier = () -> User.getUser(damagingPlayerSupplier.get());
-
-            // Deals with two players pvping in IridiumSkyblock world
-            if (IridiumSkyblock.getConfiguration().disablePvPOnIslands
-                    && damagee instanceof Player
-                    && damager instanceof Player) {
+        if (damager instanceof Projectile && damagee instanceof Hanging) {
+            Player player = (Player) ((Egg) damager).getShooter();
+            User user = User.getUser(player);
+            if (player != null && !island.members.contains(player.getUniqueId().toString()) && !island.isCoop(user.getIsland())) {
                 event.setCancelled(true);
-                return;
             }
+        }
+        // Using suppliers to defer work if unnecessary
+        // This includes seemingly innocuous downcast operations
+        final Supplier<Player> damageePlayerSupplier = () -> (Player) damagee;
+        final Supplier<User> damageeUserSupplier = () -> User.getUser(damageePlayerSupplier.get());
+        final Supplier<Island> damageeIslandSupplier = () -> damageeUserSupplier.get().getIsland();
+        final Supplier<Arrow> arrowSupplier = () -> (Arrow) damager;
+        final Supplier<ProjectileSource> projectileSourceSupplier = () -> arrowSupplier.get().getShooter();
+        final Supplier<Player> shooterSupplier = () -> (Player) projectileSourceSupplier.get();
+        final Supplier<User> shootingUserSupplier = () -> User.getUser(Objects.requireNonNull(shooterSupplier.get()));
+        final Supplier<Player> damagingPlayerSupplier = () -> (Player) damager;
+        final Supplier<User> damagingUserSupplier = () -> User.getUser(damagingPlayerSupplier.get());
 
-            // Deals with A player getting damaged by a bow fired from a player in IridiumSkyblock world
-            if (IridiumSkyblock.getConfiguration().disablePvPOnIslands
-                    && damagee instanceof Player
-                    && damager instanceof Arrow
-                    && projectileSourceSupplier.get() instanceof Player) {
-                event.setCancelled(true);
-                return;
-            }
+        // Deals with two players pvping in IridiumSkyblock world
+        if (IridiumSkyblock.getConfiguration().disablePvPOnIslands
+                && damagee instanceof Player
+                && damager instanceof Player) {
+            event.setCancelled(true);
+            return;
+        }
 
-            // Deals with a player attacking animals with bows that are not from their island
-            if (damager instanceof Arrow
-                    && !(damagee instanceof Player)
-                    && projectileSourceSupplier.get() instanceof Player
-                    && !island.getPermissions(shootingUserSupplier.get()).killMobs) {
-                event.setCancelled(true);
-                return;
-            }
+        // Deals with A player getting damaged by a bow fired from a player in IridiumSkyblock world
+        if (IridiumSkyblock.getConfiguration().disablePvPOnIslands
+                && damagee instanceof Player
+                && damager instanceof Arrow
+                && projectileSourceSupplier.get() instanceof Player) {
+            event.setCancelled(true);
+            return;
+        }
 
-            // Deals with a player attacking animals that are not from their island
-            if (damager instanceof Player
-                    && !(damagee instanceof Player)
-                    && !island.getPermissions(damagingUserSupplier.get()).killMobs) {
-                event.setCancelled(true);
-                return;
-            }
+        // Deals with a player attacking animals with bows that are not from their island
+        if (damager instanceof Arrow
+                && !(damagee instanceof Player)
+                && projectileSourceSupplier.get() instanceof Player
+                && !island.getPermissions(shootingUserSupplier.get()).killMobs) {
+            event.setCancelled(true);
+            return;
+        }
 
-            //Deals with a mob attacking a player that doesn't belong to the island (/is home traps?)
-            if (IridiumSkyblock.getConfiguration().disablePvPOnIslands
-                    && damagee instanceof Player
-                    && !(damager instanceof Player)) {
-                if (damageeIslandSupplier.get() != null) {
-                    if (!damageeIslandSupplier.get().isInIsland(damager.getLocation())) {
-                        event.setCancelled(true);
-                        return;
-                    }
-                } else {
+        // Deals with a player attacking animals that are not from their island
+        if (damager instanceof Player
+                && !(damagee instanceof Player)
+                && !island.getPermissions(damagingUserSupplier.get()).killMobs) {
+            event.setCancelled(true);
+            return;
+        }
+
+        //Deals with a mob attacking a player that doesn't belong to the island (/is home traps?)
+        if (IridiumSkyblock.getConfiguration().disablePvPOnIslands
+                && damagee instanceof Player
+                && !(damager instanceof Player)) {
+            if (damageeIslandSupplier.get() != null) {
+                if (!damageeIslandSupplier.get().isInIsland(damager.getLocation())) {
                     event.setCancelled(true);
                     return;
                 }
-            }
-
-            // Deals with two allies pvping
-            if (IridiumSkyblock.getConfiguration().disablePvPBetweenIslandMembers
-                    && damagee instanceof Player
-                    && damager instanceof Player
-                    && damageeIslandSupplier.get() != null
-                    && damageeIslandSupplier.get().equals(damagingUserSupplier.get().getIsland())) {
+            } else {
                 event.setCancelled(true);
                 return;
             }
+        }
 
-            // Deals with two allies pvping with bows
-            if (IridiumSkyblock.getConfiguration().disablePvPBetweenIslandMembers
-                    && damagee instanceof Player
-                    && damager instanceof Arrow
-                    && projectileSourceSupplier.get() instanceof Player
-                    && damageeIslandSupplier.get() != null
-                    && damageeIslandSupplier.get().equals(damagingUserSupplier.get().getIsland())) {
-                event.setCancelled(true);
-                return;
-            }
-        } catch (Exception ex) {
-            IridiumSkyblock.getInstance().sendErrorMessage(ex);
+        // Deals with two allies pvping
+        if (IridiumSkyblock.getConfiguration().disablePvPBetweenIslandMembers
+                && damagee instanceof Player
+                && damager instanceof Player
+                && damageeIslandSupplier.get() != null
+                && damageeIslandSupplier.get().equals(damagingUserSupplier.get().getIsland())) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Deals with two allies pvping with bows
+        if (IridiumSkyblock.getConfiguration().disablePvPBetweenIslandMembers
+                && damagee instanceof Player
+                && damager instanceof Arrow
+                && projectileSourceSupplier.get() instanceof Player
+                && damageeIslandSupplier.get() != null
+                && damageeIslandSupplier.get().equals(damagingUserSupplier.get().getIsland())) {
+            event.setCancelled(true);
+            return;
         }
     }
 
     @EventHandler
     public void onVehicleDamage(VehicleDamageEvent event) {
-        try {
-            final Vehicle vehicle = event.getVehicle();
-            final Location location = vehicle.getLocation();
-            final Island island = IslandManager.getIslandViaLocation(location);
-            if (island == null) return;
+        final Vehicle vehicle = event.getVehicle();
+        final Location location = vehicle.getLocation();
+        final Island island = IslandManager.getIslandViaLocation(location);
+        if (island == null) return;
 
-            final Entity attacker = event.getAttacker();
-            if (!(attacker instanceof Player)) return;
+        final Entity attacker = event.getAttacker();
+        if (!(attacker instanceof Player)) return;
 
-            final Player attackerPlayer = (Player) attacker;
-            final User attackerUser = User.getUser(attackerPlayer);
+        final Player attackerPlayer = (Player) attacker;
+        final User attackerUser = User.getUser(attackerPlayer);
 
-            if (!island.getPermissions(attackerUser).killMobs)
-                event.setCancelled(true);
-        } catch (Exception ex) {
-            IridiumSkyblock.getInstance().sendErrorMessage(ex);
-        }
+        if (!island.getPermissions(attackerUser).killMobs)
+            event.setCancelled(true);
     }
 
     @EventHandler

@@ -1,9 +1,6 @@
 package com.iridium.iridiumskyblock.gui;
 
-import com.iridium.iridiumskyblock.IridiumSkyblock;
-import com.iridium.iridiumskyblock.Island;
-import com.iridium.iridiumskyblock.User;
-import com.iridium.iridiumskyblock.Utils;
+import com.iridium.iridiumskyblock.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -15,7 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class WarpGUI extends GUI implements Listener {
-    public Map<Integer, Island.Warp> warps = new HashMap<>();
+    public Map<Integer, IslandWarp> warps = new HashMap<>();
 
     public WarpGUI(Island island) {
         super(island, IridiumSkyblock.getInventories().warpGUISize, IridiumSkyblock.getInventories().warpGUITitle);
@@ -30,9 +27,9 @@ public class WarpGUI extends GUI implements Listener {
             Island island = getIsland();
             int i = 9;
             warps.clear();
-            for (Island.Warp warp : island.warps) {
-                warps.put(i, warp);
-                setItem(i, Utils.makeItem(IridiumSkyblock.getInventories().islandWarp, Collections.singletonList(new Utils.Placeholder("warp", warp.getName()))));
+            for (IslandWarp islandWarp : island.islandWarps) {
+                warps.put(i, islandWarp);
+                setItem(i, Utils.makeItem(IridiumSkyblock.getInventories().islandWarp, Collections.singletonList(new Utils.Placeholder("warp", islandWarp.getName()))));
                 i++;
             }
             if (IridiumSkyblock.getInventories().backButtons) setItem(getInventory().getSize() - 5, Utils.makeItem(IridiumSkyblock.getInventories().back));
@@ -55,18 +52,18 @@ public class WarpGUI extends GUI implements Listener {
                 }
             }
             if (warps.containsKey(e.getSlot())) {
-                Island.Warp warp = warps.get(e.getSlot());
+                IslandWarp islandWarp = warps.get(e.getSlot());
                 if (e.getClick().equals(ClickType.RIGHT)) {
                     u.getIsland().removeWarp(warps.get(e.getSlot()));
                     getInventory().clear();
                     addContent();
                 } else {
-                    if (warp.getPassword().isEmpty()) {
-                        p.teleport(warp.getLocation());
+                    if (islandWarp.getPassword().isEmpty()) {
+                        p.teleport(islandWarp.getLocation());
                         p.sendMessage(Utils.color(IridiumSkyblock.getMessages().teleporting.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
                     } else {
                         p.sendMessage(Utils.color(IridiumSkyblock.getMessages().enterPassword.replace("%prefix%", IridiumSkyblock.getConfiguration().prefix)));
-                        u.warp = warp;
+                        u.islandWarp = islandWarp;
                     }
                 }
                 p.closeInventory();

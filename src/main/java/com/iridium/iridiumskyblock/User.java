@@ -16,7 +16,7 @@ public class User {
     public int islandID;
     public Role role;
     public Set<Integer> invites;
-    public Island.Warp warp;
+    public IslandWarp islandWarp;
     public boolean bypassing;
     public boolean islandChat;
     public boolean spyingIslandsChat;
@@ -65,7 +65,7 @@ public class User {
     public String getCooldownTimeMessage() {
         long time = (this.lastCreate.getTime() - System.currentTimeMillis()) / 1000;
         int day = (int) TimeUnit.SECONDS.toDays(time);
-        int hours = (int) Math.floor(TimeUnit.SECONDS.toHours(time - day * 86400));
+        int hours = (int) Math.floor(TimeUnit.SECONDS.toHours(time - day * 86400L));
         int minute = (int) Math.floor((time - day * 86400 - hours * 3600) / 60.00);
         int second = (int) Math.floor((time - day * 86400 - hours * 3600) % 60.00);
         return IridiumSkyblock.getMessages().createCooldown.replace("%days%", day + "").replace("%hours%", hours + "").replace("%minutes%", minute + "").replace("%seconds%", second + "").replace("%prefix%", IridiumSkyblock.getConfiguration().prefix);
