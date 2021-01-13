@@ -12,8 +12,10 @@ import com.iridium.iridiumskyblock.gui.*;
 import com.iridium.iridiumskyblock.managers.IslandDataManager;
 import com.iridium.iridiumskyblock.managers.IslandManager;
 import com.iridium.iridiumskyblock.support.SpawnerSupport;
+import java.util.function.Consumer;
 import net.md_5.bungee.api.chat.*;
 import org.bukkit.*;
+import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.CreatureSpawner;
@@ -30,6 +32,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.bukkit.util.noise.SimplexOctaveGenerator;
 
 public class Island {
 
@@ -1086,13 +1089,34 @@ public class Island {
     }
 
     private void setBlock(World world) {
-        for (int X = pos1.getBlockX(); X <= pos2.getBlockX(); X++) {
-            for (int Y = 0; Y <= 255; Y++) {
-                for (int Z = pos1.getBlockZ(); Z <= pos2.getBlockZ(); Z++) {
-                    IridiumSkyblock.getNms().setBlockFast(world.getBlockAt(X, Y, Z), 0, (byte) 0);
-                }
+      SimplexOctaveGenerator generator = new SimplexOctaveGenerator(new Random(world.getSeed()), 8);
+      generator.setScale(0.005D);
+      final Config config = IridiumSkyblock.getConfiguration();
+
+      for (int x = pos1.getBlockX(); x <= pos2.getBlockX(); x++) {
+          for (int z = pos1.getBlockZ(); z <= pos2.getBlockZ(); z++) {
+              int cx = x >> 4;
+              int cz = z >> 4;
+              int currentFloorHeight = (int) ((generator.noise(cx * 16 + x, cz * 16 + z, 0.5D, 0.5D, true) + 1) * (config.maxOceanFloorLevel - config.minOceanFloorLevel) + config.minOceanFloorLevel);
+              setBlock(world, x, 0, z, Objects.requireNonNull(XMaterial.BEDROCK));
+              for (int y = 1; y < currentFloorHeight; y++) {
+                  setBlock(world, x, y, z, Objects.requireNonNull(XMaterial.GRAVEL));
+              }
+              setBlock(world, x, currentFloorHeight, z, Objects.requireNonNull(XMaterial.SAND));
+              for (int y = currentFloorHeight + 1; y <= config.waterHeight; y++) {
+                  XMaterial material = config.netherLavaOcean && world.getEnvironment() == Environment.NETHER ? XMaterial.LAVA : XMaterial.WATER;
+                  setBlock(world, x, y, z, Objects.requireNonNull(material));
+              }
+              for (int y = config.waterHeight + 1; y <= 255; y++) {
+                  XMaterial material = XMaterial.AIR;
+                  setBlock(world, x, y, z, Objects.requireNonNull(material));
+              }
             }
         }
+    }
+
+    private void setBlock(World world, int x, int y, int z, XMaterial type) {
+        IridiumSkyblock.getNms().setBlockFast(world.getBlockAt(x, y, z), type.getId(), (byte) 0);
     }
 
     public void killEntities() {

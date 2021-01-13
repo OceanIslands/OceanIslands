@@ -57,9 +57,11 @@ public class SkyblockGenerator extends ChunkGenerator {
             );
             for (int y = currentFloorHeight + 1; y <= config.waterHeight; y++) {
               XMaterial material = config.netherLavaOcean && world.getEnvironment() == Environment.NETHER ? XMaterial.LAVA : XMaterial.WATER;
-              chunkData.setBlock(x, y, z,
-                Objects.requireNonNull(material.parseMaterial())
-              );
+              chunkData.setBlock(x, y, z, Objects.requireNonNull(material.parseMaterial()));
+            }
+            for (int y = config.waterHeight + 1; y <= 255; y++) {
+              XMaterial material = XMaterial.AIR;
+              chunkData.setBlock(x, y, z, Objects.requireNonNull(material.parseMaterial()));
             }
           }
         }
@@ -83,4 +85,5 @@ public class SkyblockGenerator extends ChunkGenerator {
     public @NotNull List<BlockPopulator> getDefaultPopulators(@NotNull World world) {
         return Collections.emptyList();
     }
+
 }
